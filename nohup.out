@@ -1,0 +1,95 @@
+Watching for file changes with StatReloader
+/root/andre_project_backend/andre/settings.py changed, reloading.
+Performing system checks...
+
+System check identified no issues (0 silenced).
+August 19, 2025 - 06:42:19
+Django version 5.2.4, using settings 'andre.settings'
+Starting development server at http://0.0.0.0:8004/
+Quit the server with CONTROL-C.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+Watching for file changes with StatReloader
+Not Found: /
+[19/Aug/2025 06:45:58] "GET / HTTP/1.1" 404 2322
+Not Found: /favicon.ico
+[19/Aug/2025 06:45:58] "GET /favicon.ico HTTP/1.1" 404 2373
+Not Found: /
+[19/Aug/2025 06:46:17] "GET / HTTP/1.1" 404 2322
+Not Found: /docs
+[19/Aug/2025 06:47:53] "GET /docs HTTP/1.1" 404 2345
+[19/Aug/2025 06:48:06] "GET /microsoft/get/microsoft/accounts HTTP/1.1" 200 196
+[19/Aug/2025 06:48:06] "GET /microsoft/get/microsoft/accounts HTTP/1.1" 200 196
+/root/andre_project_backend/microsoft/views.py changed, reloading.
+Performing system checks...
+
+System check identified no issues (0 silenced).
+August 19, 2025 - 06:42:27
+Django version 5.2.4, using settings 'andre.settings'
+Starting development server at http://0.0.0.0:8004/
+Quit the server with CONTROL-C.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+Watching for file changes with StatReloader
+Watching for file changes with StatReloader
+Performing system checks...
+
+System check identified no issues (0 silenced).
+August 19, 2025 - 06:55:03
+Django version 5.2.4, using settings 'andre.settings'
+Starting development server at http://0.0.0.0:8004/
+Quit the server with CONTROL-C.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+Watching for file changes with StatReloader
+[19/Aug/2025 06:59:04] "GET /microsoft/get/microsoft/accounts HTTP/1.1" 200 196
+/root/andre_project_backend/andre/settings.py changed, reloading.
+Performing system checks...
+
+System check identified no issues (0 silenced).
+August 19, 2025 - 06:55:37
+Django version 5.2.4, using settings 'andre.settings'
+Starting development server at http://0.0.0.0:8004/
+Quit the server with CONTROL-C.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+Watching for file changes with StatReloader
+[19/Aug/2025 06:59:17] "GET /microsoft/get/microsoft/accounts HTTP/1.1" 200 196
+[19/Aug/2025 06:59:17] "GET /microsoft/get/microsoft/accounts HTTP/1.1" 200 196
+/root/andre_project_backend/andre/settings.py changed, reloading.
+Performing system checks...
+
+System check identified no issues (0 silenced).
+August 19, 2025 - 06:59:05
+Django version 5.2.4, using settings 'andre.settings'
+Starting development server at http://0.0.0.0:8004/
+Quit the server with CONTROL-C.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+Watching for file changes with StatReloader
+[19/Aug/2025 07:00:43] "GET /microsoft/get/microsoft/accounts HTTP/1.1" 200 196
+[19/Aug/2025 07:00:43] "GET /microsoft/get/microsoft/accounts HTTP/1.1" 200 196
+[19/Aug/2025 07:01:03] "GET /microsoft/get/microsoft/accounts HTTP/1.1" 200 196
+[19/Aug/2025 07:01:03] "GET /microsoft/get/microsoft/accounts HTTP/1.1" 200 196
+[19/Aug/2025 07:03:34] "GET /microsoft/get/microsoft/accounts HTTP/1.1" 200 196
+[19/Aug/2025 07:03:34] "GET /microsoft/get/microsoft/accounts HTTP/1.1" 200 196
+Watching for file changes with StatReloader
+/root/andre_project_backend/microsoft/views.py changed, reloading.
+############################# https://cfea168ee3f6.ngrok-free.app/microsoft/oauth/outlook/callback/
+Performing system checks...
+
+System check identified no issues (0 silenced).
+August 19, 2025 - 07:05:14
+Django version 5.2.4, using settings 'andre.settings'
+Starting development server at http://0.0.0.0:8004/
+Quit the server with CONTROL-C.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+Watching for file changes with StatReloader
+############################# https://cfea168ee3f6.ngrok-free.app/microsoft/oauth/outlook/callback/
