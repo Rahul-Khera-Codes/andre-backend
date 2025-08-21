@@ -46,7 +46,7 @@ def get_refresh_token(refresh_token):
     
     data = {
         'client_id': os.getenv("CLIENT_ID"),
-        'scope': os.getenv("scope"),
+        'scope': os.getenv("SCOPE"),
         'refresh_token': refresh_token,
         'grant_type': "refresh_token",
         'client_secret': os.getenv("CLIENT_SECRET")
