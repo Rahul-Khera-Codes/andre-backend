@@ -12,6 +12,7 @@ class MicrosoftConnectedAccounts(models.Model):
     access_token = models.TextField(null=False)
     refresh_token = models.TextField(null=False)
 
+
 class EmailMessages(models.Model):
     message_id = models.CharField(null=False)
     body_preview = models.CharField(null=False)
@@ -22,3 +23,10 @@ class EmailMessages(models.Model):
     conversation_id = models.CharField(null=True)
     mail_time = models.DateTimeField(null=True)
     microsoft = models.ForeignKey(MicrosoftConnectedAccounts, on_delete=models.CASCADE)
+
+
+class Summarization(models.Model):
+    email = models.ForeignKey(EmailMessages, on_delete=models.CASCADE, blank=True, null=True)
+    calendar = models.JSONField(blank=True, null=True)
+    microsoft = models.ForeignKey(MicrosoftConnectedAccounts, on_delete=models.CASCADE)
+    summary = models.CharField(null=False)

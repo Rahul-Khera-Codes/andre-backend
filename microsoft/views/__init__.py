@@ -52,12 +52,13 @@ class MicrosoftConnectVerify(APIView):
         print(code)
         
         status_code, response = generate_access_token(code)
-        print("1", status_code, response)
+        print("1", status_code)
         if status_code != 200:
             return redirect(f"{os.getenv("FRONTEND_URL")}?response=error", status=status.HTTP_302_FOUND)
         
         access_token = response.get('access_token')
         refresh_token = response.get('refresh_token')
+        print("Access_token:", access_token)
         
         status_code, user_data = get_user_info(access_token)
         
@@ -149,6 +150,7 @@ class GetUserMail(APIView):
             filter = request.GET.get("filter")
             ms_access_token = account.access_token
             headers = {"Authorization": f"Bearer {ms_access_token}"}
+            print(headers)
             
             def get_ms_messages(filter: str):
                 return "https://graph.microsoft.com/v1.0/me/{}/messages".format(filter)

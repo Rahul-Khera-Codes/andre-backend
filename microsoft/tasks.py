@@ -1,8 +1,19 @@
 import json, time
 from celery import shared_task
 from datetime import date, datetime, timedelta, timezone
-from .models import MicrosoftConnectedAccounts, EmailMessages
-from .utils import get_mail_messages, get_refresh_token
+
+from .graph import summarize_email_content
+from .models import (
+    EmailMessages, 
+    MicrosoftConnectedAccounts, 
+    Summarization
+)
+from .utils import (
+    create_calendar_event,
+    get_mail_messages,
+    get_refresh_token
+)
+
 
 @shared_task
 def mail_retrieve():
@@ -48,7 +59,7 @@ def mail_retrieve():
                     
                     conversation_id = value.get('conversationId')
                     email_payload['conversation_id'] = conversation_id
-                    conversation = EmailMessages.objects.filter(conversation_id=conversation_id, microsoft=account).first()
+                    # conversation = EmailMessages.objects.filter(conversation_id=conversation_id, microsoft=account).first()
                     
                     email_payload['message_id'] = value.get('id')
                     email_payload['subject'] = value.get('subject')
@@ -67,26 +78,26 @@ def mail_retrieve():
                     email_payload['to_recipient_emails'] = to_recipient_emails
                     email_payload['mail_time'] = value.get('createdDateTime')
     
-                    email = EmailMessages.objects.create(**email_payload, microsoft=account)
-                    email_message_id = email
-                    # knowledge_base_embedding_and_storage(account.user, json.dumps(email_payload))
-                    time.sleep(5)
-                    email_payload['mail_account_holder'] = account.mail_id
-                    email_payload['current_date'] = str(date.today())
-                    email_payload.pop("mail_time")
-                    email_payload.pop("conversation_id")
+                    email: EmailMessages = EmailMessages.objects.create(**email_payload, microsoft=account)
+                    
+                    summarized_content = summarize_email_content(email_content=email.content, subject=email.subject)
+                    summarized_email_content = summarized_content.get("summary")
+                    summarized_calendar_task = summarized_content.get("calendar", None)
+                    if not summarized_calendar_task:
+                        summarization = Summarization.objects.create(email=email, microsoft=account, summary=summarized_email_content)
+                        print("summarization created successfully with not calendar event")
+                    else:
+                        summarization = Summarization.objects.create(email=email, microsoft=account, summary=summarized_email_content, calendar=summarized_calendar_task)
+                        print("Summarization create successfully with calendar event")
+                        for event in summarized_calendar_task:
+                            response = create_calendar_event(access_token, event)
+                            if response.status_code not in (200, 201):
+                                print("Error creating calender events")
+                            else:
+                                print("Calender events created successfully")
 
-                    # graph = graph_initialisation()
-                    # if conversation_id and conversation:
-                    #     response = trail_mail_graph_invoke(json.dumps(email_payload), graph)
-                    # else:
-                    #     response = graph_invoke(json.dumps(email_payload), graph)
-
-                    # response = json.loads(response)
                 
-                    # if response != False:
-                    #     for task in response:
-                    #         TodoTasks.objects.create(**task, task_creation_type="automatic",  mail_message=email_message_id, user=account.user)
+                    time.sleep(1)
     
 @shared_task 
 def new_user_mail_sync(access_token, account):
@@ -109,9 +120,12 @@ def new_user_mail_sync(access_token, account):
             if message:
                 continue
 
+            print("############################################")
+            print(value)
+
+            conversation_id = value.get('conversationId')
             email_payload['message_id'] = value.get('id')
             email_payload['subject'] = value.get('subject')
-            conversation_id = value.get('conversationId')
             email_payload['conversation_id'] = conversation_id
             conversation = EmailMessages.objects.filter(conversation_id=conversation_id, microsoft=account).first()
             email_payload['body_preview'] = value.get('bodyPreview')
@@ -129,22 +143,21 @@ def new_user_mail_sync(access_token, account):
                     to_recipient_emails.append(to_recipient_email)
             email_payload['to_recipient_emails'] = to_recipient_emails
             
-            email = EmailMessages.objects.create(**email_payload, microsoft=account)
-            email_message_id = email
-            email_payload['mail_account_holder'] = account.mail_id
-            email_payload['current_date'] = str(date.today())
-            email_payload.pop("mail_time")
-            email_payload.pop("conversation_id")
-            
-            time.sleep(5)
-            # graph = graph_initialisation()
-            # if conversation_id and conversation:
-            #     response = trail_mail_graph_invoke(json.dumps(email_payload), graph)
-            # else:
-            #     response = graph_invoke(json.dumps(email_payload), graph)
-    
-            # response = json.loads(response)
-        
-            # if response != False:
-            #     TodoTasks.objects.create(**response, task_creation_type="automatic", mail_message=email_message_id, user=account.user)
+            email: EmailMessages = EmailMessages.objects.create(**email_payload, microsoft=account)
+            summarized_content = summarize_email_content(email_content=email.content, subject=email.subject)
+            summarized_email_content = summarized_content.get("summary")
+            summarized_calendar_task = summarized_content.get("calendar", None)
+            if not summarized_calendar_task:
+                summarization = Summarization.objects.create(email=email, microsoft=account, summary=summarized_email_content)
+                print("summarization created successfully with not calendar event")
+            else:
+                summarization = Summarization.objects.create(email=email, microsoft=account, summary=summarized_email_content, calendar=summarized_calendar_task)
+                print("Summarization create successfully with calendar event")
+                for event in summarized_calendar_task:
+                    response = create_calendar_event(access_token, event)
+                    if response.status_code not in (200, 201):
+                        print("Error creating calender events")
+                    else:
+                        print("Calender events created successfully")
 
+            time.sleep(1)

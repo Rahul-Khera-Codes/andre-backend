@@ -4,9 +4,12 @@ import os
 from dotenv import load_dotenv
 import requests
 
-load_dotenv()
+# assert not load_dotenv()
+print(load_dotenv())
 
 access_token = os.getenv("ACCESS_TOKEN")
+
+print(access_token, os.getenv("REDIRECT_URI"))
 
 headers = {
     "Authorization": f"Bearer {access_token}"

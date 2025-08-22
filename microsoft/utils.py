@@ -81,3 +81,12 @@ def send_mail(access_token, subject, body, to_recipient):
     response = requests.post(url, headers=headers, json=payload)
     
     return response.status_code, response.json()
+
+
+def create_calendar_event(access_token: str, data: dict):
+    url = "https://graph.microsoft.com/v1.0/me/events"
+    headers = {
+        "Authorization": f"Bearer {access_token}"
+    }
+    response = requests.post(url, headers=headers, json=data)
+    return response
