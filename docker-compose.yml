@@ -5,17 +5,14 @@ services:
     ports:
       - "9004:8004"
     environment:
-      - DB_HOST=host.docker.internal
-      - DB_NAME=andre_django
-      - DB_PASSWORD=Java_123
-      - DB_PORT=5432
-      - DB_USER=superdbuser
+      # - DB_HOST=host.docker.internal
+      
     volumes:
       - ./:/app/andre
     networks:
       - app_net
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+    # extra_hosts:
+    #   - "host.docker.internal:host-gateway"
 
   celery_worker:
     build: ./

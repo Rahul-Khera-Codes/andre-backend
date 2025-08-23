@@ -17,10 +17,16 @@ from rest_framework_simplejwt.tokens import (
     RefreshToken
 )
 
-from ..models import MicrosoftConnectedAccounts
+from ..models import (
+    EmailMessages,
+    MicrosoftConnectedAccounts
+)
 from ..utils import generate_access_token, get_refresh_token, get_user_info
 from ..tasks import new_user_mail_sync
-from ..serializers import MicrosoftConnectAccountSerializer
+from ..serializers import (
+    EmailMessageSerializer,
+    MicrosoftConnectAccountSerializer
+)
 
 
 def get_tokens_for_user(user: MicrosoftConnectedAccounts):
@@ -49,16 +55,16 @@ def verify_access_token(token_str):
 class MicrosoftConnectVerify(APIView):
     def get(self, request):
         code = request.GET.get('code')
-        print(code)
+        # print(code)
         
         status_code, response = generate_access_token(code)
-        print("1", status_code)
+        # print("1", status_code)
         if status_code != 200:
             return redirect(f"{os.getenv("FRONTEND_URL")}?response=error", status=status.HTTP_302_FOUND)
         
         access_token = response.get('access_token')
         refresh_token = response.get('refresh_token')
-        print("Access_token:", access_token)
+        # print("Access_token:", access_token)
         
         status_code, user_data = get_user_info(access_token)
         
@@ -117,19 +123,27 @@ class GetConnectedAccounts(APIView):
         access_token = token_data.get("access")
         refresh_token = token_data.get("refresh")
         
-        account_info['access_token'] = access_token
-        account_info['id'] = account.id
-        account_info['microsoft_id'] = account.microsoft_id
-        account_info['mail'] = account.mail_id
-        account_info['given_name'] = account.given_name
-        account_info['surname'] = account.surname
-        account_info['user_principal_name'] = account.user_principal_name
-        account_info['display_name'] = account.display_name
-        account_info['refresh_token'] = refresh_token
+        # account_info['access_token'] = access_token
+        # account_info['id'] = account.id
+        # account_info['microsoft_id'] = account.microsoft_id
+        # account_info['mail_id'] = account.mail_id
+        # account_info['given_name'] = account.given_name
+        # account_info['surname'] = account.surname
+        # account_info['user_principal_name'] = account.user_principal_name
+        # account_info['display_name'] = account.display_name
+        # account_info['refresh_token'] = refresh_token
         
-        serializer = MicrosoftConnectAccountSerializer(account_info)
+        # serializer = MicrosoftConnectAccountSerializer(account_info)
         
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        serializer = MicrosoftConnectAccountSerializer(account)
+        
+        response = serializer.data
+        response.update({
+            "access_token": access_token,
+            "refresh_token": refresh_token
+        })
+        
+        return Response(response, status=status.HTTP_200_OK)
     
 
 class GetUserMail(APIView):
@@ -147,48 +161,52 @@ class GetUserMail(APIView):
             if not account:
                 return Response({"error": "User not found"}, status=status.HTTP_401_UNAUTHORIZED)
             
-            filter = request.GET.get("filter")
-            ms_access_token = account.access_token
-            headers = {"Authorization": f"Bearer {ms_access_token}"}
-            print(headers)
+            emails = EmailMessages.objects.filter(microsoft=account)
+            print(emails)
+            email_serializer = EmailMessageSerializer(emails, many=True)
             
-            def get_ms_messages(filter: str):
-                return "https://graph.microsoft.com/v1.0/me/{}/messages".format(filter)
+            # filter = request.GET.get("filter")
+            # ms_access_token = account.access_token
+            # headers = {"Authorization": f"Bearer {ms_access_token}"}
+            # print(headers)
+            
+            # def get_ms_messages(filter: str):
+            #     return "https://graph.microsoft.com/v1.0/me/{}/messages".format(filter)
                 
-            def make_request(url, headers, account: MicrosoftConnectedAccounts):
-                response = requests.get(url, headers=headers)
-                if response.status_code == 401:
-                    status_code, refresh_response = get_refresh_token(account.refresh_token)
+            # def make_request(url, headers, account: MicrosoftConnectedAccounts):
+            #     response = requests.get(url, headers=headers)
+            #     if response.status_code == 401:
+            #         status_code, refresh_response = get_refresh_token(account.refresh_token)
                     
-                    if status_code == 200:
-                        refresh_data = refresh_response.json()
-                        account.access_token = refresh_data.get("access_token")
-                        account.refresh_token = refresh_data.get('refresh_token')
-                        account.save()
+            #         if status_code == 200:
+            #             refresh_data = refresh_response.json()
+            #             account.access_token = refresh_data.get("access_token")
+            #             account.refresh_token = refresh_data.get('refresh_token')
+            #             account.save()
                         
-                        headers['Authorization'] = f"Bearer {account.access_token}"
-                        return requests.get(url, headers=headers)
-                    else:
-                        return response
-                return response
+            #             headers['Authorization'] = f"Bearer {account.access_token}"
+            #             return requests.get(url, headers=headers)
+            #         else:
+            #             return response
+            #     return response
                 
-            match filter:
-                case "sentitems":
-                    url = get_ms_messages(filter)
-                    response = make_request(url, headers, account)
-                case "inbox":
-                    url = get_ms_messages(filter)
-                    response = make_request(url, headers, account)
-                case "drafts":
-                    url = get_ms_messages(filter)
-                    response = make_request(url, headers, account)
-                case _:
-                    # Fetch top 10 messages
-                    url = "https://graph.microsoft.com/v1.0/me/messages?$top=10"
-                    response = make_request(url, headers, account)
+            # match filter:
+            #     case "sentitems":
+            #         url = get_ms_messages(filter)
+            #         response = make_request(url, headers, account)
+            #     case "inbox":
+            #         url = get_ms_messages(filter)
+            #         response = make_request(url, headers, account)
+            #     case "drafts":
+            #         url = get_ms_messages(filter)
+            #         response = make_request(url, headers, account)
+            #     case _:
+            #         # Fetch top 10 messages
+            #         url = "https://graph.microsoft.com/v1.0/me/messages?$top=10"
+            #         response = make_request(url, headers, account)
             
-            if response.status_code == 401:
-                return Response({"error": "Microsoft authentication failure"}, status=status.HTTP_401_UNAUTHORIZED)
+            # if response.status_code == 401:
+            #     return Response({"error": "Microsoft authentication failure"}, status=status.HTTP_401_UNAUTHORIZED)
             
         except ExpiredTokenError as e:
             return Response({"error": "Token expired"}, status=status.HTTP_401_UNAUTHORIZED)
@@ -200,7 +218,9 @@ class GetUserMail(APIView):
             return Response({"error": "Token Error"}, status=status.HTTP_401_UNAUTHORIZED)
         
         except Exception as e:
-            return Response({"error": "Internal Error"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)    
+            print("error:", e)
+            return Response({"error": f"Internal Error: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)    
         
-        messages = response.json().get("value", [])
-        return Response({'mails': messages}, status=status.HTTP_200_OK)
+        # messages = response.json().get("value", [])
+        # print("messages:", messages)
+        return Response(email_serializer.data, status=status.HTTP_200_OK)

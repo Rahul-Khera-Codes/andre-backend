@@ -1,4 +1,6 @@
 import os, requests
+
+from bs4 import BeautifulSoup
 from datetime import datetime, timezone, timedelta
 
 def generate_access_token(code):
@@ -29,7 +31,9 @@ def get_user_info(access_token):
 
 def get_mail_messages(access_token, time_filter):
     
-    url = f"https://graph.microsoft.com/v1.0/me/messages?$filter=receivedDateTime ge {time_filter}"
+    # url = f"https://graph.microsoft.com/v1.0/me/messages?$filter=receivedDateTime ge {time_filter}&$orderBy=receivedDateTime asc&$select=id,subject,from,receivedDateTime,bodyPreview,uniqueBody,body"
+    # url = f"https://graph.microsoft.com/v1.0/me/messages?$orderBy=receivedDateTime asc&$select=id,subject,sender,toRecipients,from,createdDateTime,receivedDateTime,bodyPreview,uniqueBody,body"
+    url = f"https://graph.microsoft.com/v1.0/me/messages?$orderBy=receivedDateTime desc&$select=id,subject,sender,toRecipients,from,createdDateTime,receivedDateTime,bodyPreview,uniqueBody,body"
     
     headers = {
         "Authorization": f"Bearer {access_token}",
@@ -90,3 +94,11 @@ def create_calendar_event(access_token: str, data: dict):
     }
     response = requests.post(url, headers=headers, json=data)
     return response
+
+def get_unique_body(message):
+    body = message["content"]
+    if message["contentType"] == "html":
+        text = BeautifulSoup(body, "html.parser").get_text(separator="\n")
+    else:
+        text = body
+    return text

@@ -4,6 +4,7 @@ from datetime import date, datetime, timedelta, timezone
 
 from .graph import summarize_email_content
 from .models import (
+    Calender,
     EmailMessages, 
     MicrosoftConnectedAccounts, 
     Summarization
@@ -11,7 +12,8 @@ from .models import (
 from .utils import (
     create_calendar_event,
     get_mail_messages,
-    get_refresh_token
+    get_refresh_token,
+    get_unique_body
 )
 
 
@@ -47,7 +49,7 @@ def mail_retrieve():
                 
             response = response.json()
 
-            values = response.get('value')
+            values = response.get('value')[::-1]
             if values:
                 for value in values:
                     email_payload = {}
@@ -65,6 +67,7 @@ def mail_retrieve():
                     email_payload['subject'] = value.get('subject')
                     email_payload['body_preview'] = value.get('bodyPreview')
                     email_payload['content'] = value['body']['content']
+                    email_payload['unique_body'] = get_unique_body(value['uniqueBody'])
                     sender = ""
                     sender = value.get('sender')
                     if sender:
@@ -80,7 +83,7 @@ def mail_retrieve():
     
                     email: EmailMessages = EmailMessages.objects.create(**email_payload, microsoft=account)
                     
-                    summarized_content = summarize_email_content(email_content=email.content, subject=email.subject)
+                    summarized_content = summarize_email_content(email_content=email.unique_body, subject=email.subject)
                     summarized_email_content = summarized_content.get("summary")
                     summarized_calendar_task = summarized_content.get("calendar", None)
                     if not summarized_calendar_task:
@@ -109,8 +112,10 @@ def new_user_mail_sync(access_token, account):
     status_code, response = get_mail_messages(access_token, time_filter)
     
     response = response.json()
+    # print("???????????:", response)
     
-    values = response.get('value')
+    values = response.get('value')[::-1]
+    print("Message length:", len(values))
     if values:
         for value in values:
             email_payload = {}
@@ -120,8 +125,9 @@ def new_user_mail_sync(access_token, account):
             if message:
                 continue
 
+            unique_body = get_unique_body(value['uniqueBody'])
             print("############################################")
-            print(value)
+            print(unique_body)
 
             conversation_id = value.get('conversationId')
             email_payload['message_id'] = value.get('id')
@@ -130,6 +136,7 @@ def new_user_mail_sync(access_token, account):
             conversation = EmailMessages.objects.filter(conversation_id=conversation_id, microsoft=account).first()
             email_payload['body_preview'] = value.get('bodyPreview')
             email_payload['content'] = value['body']['content']
+            email_payload['unique_body'] = unique_body
             sender = ""
             sender = value.get('sender')
             if sender:
@@ -144,20 +151,37 @@ def new_user_mail_sync(access_token, account):
             email_payload['to_recipient_emails'] = to_recipient_emails
             
             email: EmailMessages = EmailMessages.objects.create(**email_payload, microsoft=account)
-            summarized_content = summarize_email_content(email_content=email.content, subject=email.subject)
-            summarized_email_content = summarized_content.get("summary")
-            summarized_calendar_task = summarized_content.get("calendar", None)
-            if not summarized_calendar_task:
+            # print("Unique body:", email.unique_body)
+            # print("#"*50)
+            if email.unique_body:
+                summarized_content = summarize_email_content(email_content=email.unique_body, subject=email.subject)
+                summarized_email_content = summarized_content.get("summary")
+                summarized_calendar_task = summarized_content.get("calendar", None)
+                
                 summarization = Summarization.objects.create(email=email, microsoft=account, summary=summarized_email_content)
                 print("summarization created successfully with not calendar event")
-            else:
-                summarization = Summarization.objects.create(email=email, microsoft=account, summary=summarized_email_content, calendar=summarized_calendar_task)
-                print("Summarization create successfully with calendar event")
-                for event in summarized_calendar_task:
-                    response = create_calendar_event(access_token, event)
-                    if response.status_code not in (200, 201):
-                        print("Error creating calender events")
-                    else:
-                        print("Calender events created successfully")
+                    
+                calender_event = []
+                if summarized_calendar_task:
+                    for event in summarized_calendar_task:
+                        event_response = create_calendar_event(access_token, event)
+                    
+                        if event_response.status_code not in (200, 201):
+                            print("Error creating calender events")
+                        else:
+                            event_response = event_response.json()
+                            print(event_response)
+                            event = Calender.objects.create(
+                                email=email,
+                                end=event_response.get("end").get('dateTime'),
+                                event_id=event_response.get("id"),
+                                microsoft=account,
+                                remainder_minutes_before_start=event_response.get("reminderMinutesBeforeStart"),
+                                start=event_response.get("start").get('dateTime'),
+                                subject=event_response.get('subject'),
+                                summary=summarization,
+                                location=event_response.get('location')
+                            )
+                            calender_event.append(event)        
 
             time.sleep(1)
