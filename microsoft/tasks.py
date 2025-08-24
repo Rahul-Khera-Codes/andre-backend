@@ -12,6 +12,7 @@ from .models import (
 from .utils import (
     create_calendar_event,
     get_mail_messages,
+    get_calendar_event,
     get_refresh_token,
     get_unique_body
 )
@@ -101,6 +102,62 @@ def mail_retrieve():
 
                 
                     time.sleep(1)
+    
+
+@shared_task
+def calendar_event_retrieve():
+    
+    accounts = MicrosoftConnectedAccounts.objects.all()
+    if accounts:
+        for account in accounts:
+            access_token = account.access_token
+            refresh_token = account.refresh_token
+            minutes_ago = datetime.now(timezone.utc) - timedelta(minutes=30)
+            time_filter = minutes_ago.replace(microsecond=0).isoformat().replace('+00:00', 'Z')
+            status_code, response = get_calendar_event(access_token, time_filter)
+            
+            if status_code != 200:
+                status_code, response = get_refresh_token(refresh_token)
+                
+                if status_code != 200:
+                    continue
+                
+                response = response.json()
+                access_token = response.get('access_token')
+                refresh_token = response.get('refresh_token')
+                account.access_token  = access_token
+                account.refresh_token = refresh_token
+                account.save()
+                
+                status_code, response = get_calendar_event(access_token, time_filter)
+                
+                if status_code != 200:
+                    continue
+                
+            response = response.json()
+
+            values = response.get('value')[::-1]
+            if values:
+                for value in values:
+                    event_payload = {}
+                    event_id = value.get('id')
+    
+                    event = Calender.objects.filter(event_id=event_id, microsoft=account).first()
+                    if event:
+                        continue
+                    
+                    event_payload['event_id'] = event_id
+                    event_payload['subject'] = value.get('subject')
+                    event_payload['start'] = value.get('start')
+                    event_payload['end'] = value['end']
+                    event_payload['remainder_minutes_before_start'] = get_unique_body(value['remainderMinutesBeforeStart'])
+                    
+                    event: Calender = Calender.objects.create(**event_payload, microsoft=account)
+                    
+                    print("Event saved in database successfully")
+                
+                    time.sleep(1)
+    
     
 @shared_task 
 def new_user_mail_sync(access_token, account):

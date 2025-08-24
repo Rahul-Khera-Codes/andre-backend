@@ -44,6 +44,36 @@ def get_mail_messages(access_token, time_filter):
     
     return response.status_code, response
 
+
+def get_calendar_event(access_token, time_filter):
+    
+    # url = f"https://graph.microsoft.com/v1.0/me/messages?$filter=receivedDateTime ge {time_filter}&$orderBy=receivedDateTime asc&$select=id,subject,from,receivedDateTime,bodyPreview,uniqueBody,body"
+    # url = f"https://graph.microsoft.com/v1.0/me/messages?$orderBy=receivedDateTime asc&$select=id,subject,sender,toRecipients,from,createdDateTime,receivedDateTime,bodyPreview,uniqueBody,body"
+    url = f"https://graph.microsoft.com/v1.0/me/messages?$orderBy=receivedDateTime desc&$select=id,subject,sender,toRecipients,from,createdDateTime,receivedDateTime,bodyPreview,uniqueBody,body"
+    
+    headers = {
+        "Authorization": f"Bearer {access_token}",
+        "Accept": "application/json"
+    }
+    
+    response = requests.get(url, headers=headers)
+    
+    return response.status_code, response
+
+
+def create_calendar_event(access_token: str, event_body: dict, /):
+    url = f"https://graph.microsoft.com/v1.0/me/events"
+    
+    headers = {
+        "Authorization": f"Bearer {access_token}",
+        "Accept": "application/json"
+    }
+    
+    response = requests.get(url, headers=headers, json=event_body)
+    
+    return response.status_code, response.json()
+
+
 def get_refresh_token(refresh_token):
     
     url = "https://login.microsoftonline.com/common/oauth2/v2.0/token"
@@ -87,13 +117,6 @@ def send_mail(access_token, subject, body, to_recipient):
     return response.status_code, response.json()
 
 
-def create_calendar_event(access_token: str, data: dict):
-    url = "https://graph.microsoft.com/v1.0/me/events"
-    headers = {
-        "Authorization": f"Bearer {access_token}"
-    }
-    response = requests.post(url, headers=headers, json=data)
-    return response
 
 def get_unique_body(message):
     body = message["content"]

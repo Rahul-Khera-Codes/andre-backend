@@ -69,7 +69,15 @@ class CalenderSerializer(serializers.ModelSerializer):
                 "displayName": instance.location
             }
         }
-
+        
+class CalenderCreateSerializer(serializers.Serializer):
+    end = serializers.DateTimeField()
+    start = serializers.DateTimeField()
+    subject = serializers.CharField()
+    body = serializers.CharField(required=False, default="")
+    location = serializers.CharField(required=False, default="")
+    remainderMinutesBeforeStart = serializers.IntegerField(default=15, required=False)
+    
 
 class SummarizationSerializer(serializers.ModelSerializer):
     summary = serializers.CharField()

@@ -167,6 +167,10 @@ CELERY_BEAT_SCHEDULE = {
         "task": "microsoft.tasks.mail_retrieve",
         "schedule": crontab(minute="*/3"),
     },
+    "calendar_event_retrieve_task": {
+        "task": "microsoft.tasks.calendar_event_retrieve",
+        "schedule": crontab(minute="*/3")
+    }
 }
 
 

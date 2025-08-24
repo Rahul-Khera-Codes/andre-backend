@@ -1,0 +1,126 @@
+from datetime import timedelta
+
+from django.utils import timezone
+from rest_framework import status
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework_simplejwt.exceptions import (
+    ExpiredTokenError,
+    InvalidToken,
+    TokenError
+)
+
+
+from . import verify_access_token
+from ..models import Calender
+from ..serializers import (
+    CalenderSerializer,
+    CalenderCreateSerializer
+)
+from ..utils import create_calendar_event
+
+
+
+class CalenderEventView(APIView):
+    def get(self, request):
+        try:
+            jwt_auth_header = request.headers.get("Authorization")
+            if jwt_auth_header and jwt_auth_header.startswith("Bearer "):
+                jwt_access_token = jwt_auth_header.split(" ")[1]
+            else:
+                jwt_access_token = None
+            if not jwt_access_token:
+                return Response({"error": "Not Token"}, status=status.HTTP_401_UNAUTHORIZED)
+            
+            
+            account = verify_access_token(jwt_access_token)
+            if not account:
+                return Response({"error": "User not found"}, status=status.HTTP_401_UNAUTHORIZED)
+            
+            now = timezone.now()
+            thresold = now + timezone(minutes=15)
+            
+            account = verify_access_token(jwt_access_token)
+            events = Calender.objects.filter(microsoft=account, start__gt=now, start_lts=thresold)
+            serializer = CalenderSerializer(events, many=True)
+            
+            return Response(serializer.data, status=status.HTTP_200_OK)
+            
+        except ExpiredTokenError as e:
+            return Response({"error": "Token expired"}, status=status.HTTP_401_UNAUTHORIZED)
+        
+        except InvalidToken as e:
+            return Response({"error": "Invalid Token"}, status=status.HTTP_401_UNAUTHORIZED)
+        
+        except TokenError as e:
+            return Response({"error": "Token Error"}, status=status.HTTP_401_UNAUTHORIZED)
+        
+        except Exception as e:
+            return Response({"error": "Internal Error"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)    
+        
+    def post(self, request):
+        try:
+            jwt_auth_header = request.headers.get("Authorization")
+            if jwt_auth_header and jwt_auth_header.startswith("Bearer "):
+                jwt_access_token = jwt_auth_header.split(" ")[1]
+            else:
+                jwt_access_token = None
+            if not jwt_access_token:
+                return Response({"error": "Not Token"}, status=status.HTTP_401_UNAUTHORIZED)
+            
+            account = verify_access_token(jwt_access_token)
+            if not account:
+                return Response({"error": "User not found"}, status=status.HTTP_401_UNAUTHORIZED)
+                
+            serializers = CalenderCreateSerializer(request.data)
+            if serializers.is_valid():
+                event_body = {
+                    'subject': serializers.validated_data.get('subject'),
+                    'start': {
+                        "dateTime": serializers.validated_data.get('start'),
+                        "timeZone": "UTC"
+                    },
+                    'end': {
+                        "dateTime": serializers.validated_data.get('end'),
+                        "timeZone": "UTC"
+                    },
+                    "reminderMinutesBeforeStart": serializers.validate_data.get('reminderMinutesBeforeStart'),
+                }
+                body = serializers.validated_data.get('body')
+                location = serializers.validated_data.get('location')
+                if body:
+                    event_body['body'] = body
+                if location: event_body['location'] = location
+                
+                status_code, response = create_calendar_event(account.access_token, event_body)
+                if status_code not in (200, 201):
+                    return Response({"error": "Error in creating calender event"}, status=status.HTTP_400_BAD_REQUEST)
+                
+                event_body = {
+                    "event_id": response.get('id'),
+                    'subject': response.get('subject'),
+                    'start': response.get('start'),
+                    'end': response.get('end'),
+                    "reminderMinutesBeforeStart": response.get('reminderMinutesBeforeStart'),
+                }
+                body = response.get('body')
+                location = response.get('location')
+                if body:
+                    event_body['body'] = body
+                if location: event_body['location'] = location
+                
+                calender = Calender.objects.create(**event_body, microsoft=account)
+                return Response({"message": "Calendar event created successfully"}, status=status.HTTP_201_CREATED)
+        
+        except ExpiredTokenError as e:
+            return Response({"error": "Token expired"}, status=status.HTTP_401_UNAUTHORIZED)
+        
+        except InvalidToken as e:
+            return Response({"error": "Invalid Token"}, status=status.HTTP_401_UNAUTHORIZED)
+        
+        except TokenError as e:
+            return Response({"error": "Token Error"}, status=status.HTTP_401_UNAUTHORIZED)
+        
+        except Exception as e:
+            return Response({"error": "Internal Error"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)    
+        
