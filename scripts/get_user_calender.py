@@ -11,7 +11,7 @@ ACCESS_TOKEN = os.getenv("ACCESS_TOKEN")
 # print(ACCESS_TOKEN)
 
 # Microsoft Graph endpoint for events
-GRAPH_URL = "https://graph.microsoft.com/v1.0/me/events?$select=subject,start,end,reminderMinutesBeforeStart"
+GRAPH_URL = "https://graph.microsoft.com/v1.0/me/events"
 
 headers = {
     "Authorization": f"Bearer {ACCESS_TOKEN}"
@@ -28,7 +28,7 @@ if response.status_code == 200:
         start = event["start"]["dateTime"]
         end = event["end"]["dateTime"]
         reminder = event.get("reminderMinutesBeforeStart", None)
-        print(f"- {subject} | {start} → {end} | Reminder: {reminder} mins before")
+        # print(f"- {subject} | {start} → {end} | Reminder: {reminder} mins before")
         print('-'*30)
 else:
     print("Error:", response.status_code, response.text)

@@ -2,6 +2,7 @@ services:
   backend:
     build: ./
     container_name: andre_backend
+    command: ["python",  "manage.py", "runserver", "0.0.0.0:8004"]
     ports:
       - "9004:8004"
     env_file:
@@ -20,7 +21,7 @@ services:
       - .env
     volumes:
       - ./:/app/andre
-    command: celery -A andre worker -l info
+    command: ["celery", "-A", "andre", "worker",  "-l", "info"]
     depends_on:
       - backend
   
@@ -31,7 +32,7 @@ services:
       - .env
     volumes:
       - ./:/app/andre
-    command: celery -A andre beat -l info
+    command: ["celery", "-A", "andre", "beat",  "-l", "info"]
     depends_on:
       - celery_worker
 

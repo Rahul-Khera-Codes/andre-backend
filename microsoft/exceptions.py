@@ -1,0 +1,6 @@
+class MSInvalidTokenError(Exception):
+    ...
+
+
+class UserTokenNotFound(Exception):
+    ...

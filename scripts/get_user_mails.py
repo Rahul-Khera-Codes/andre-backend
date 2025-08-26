@@ -9,14 +9,14 @@ print(load_dotenv())
 
 access_token = os.getenv("ACCESS_TOKEN")
 
-print(access_token, os.getenv("REDIRECT_URI"))
+# print(access_token, os.getenv("REDIRECT_URI"))
 
 headers = {
     "Authorization": f"Bearer {access_token}"
 }
 
 # Fetch top 10 messages
-url = "https://graph.microsoft.com/v1.0/me/messages?$top=10"
+url = "https://graph.microsoft.com/v1.0/me/messages?$top=99&$orderBy=receivedDateTime asc"
 # url = "https://graph.microsoft.com/v1.0/me/sentitems/messages"
 url_attachment_lists = 'https://graph.microsoft.com/v1.0/me/messages/{}/attachments'
 
@@ -25,11 +25,13 @@ response = requests.get(url, headers=headers)
 if response.status_code == 200:
     messages = response.json().get("value", [])
     for msg in messages:
-        # print(msg)
+        print(msg)
         print("Subject:", msg.get("subject"))
         print("From:", msg.get("from", {}).get("emailAddress", {}).get("address"))
         print("Received:", msg.get("receivedDateTime"))
-        print("Preview:", msg.get("bodyPreview"))
+        # print("Preview:", msg.get("bodyPreview"))
+        print("toRecipients:", msg.get('toRecipients'))
+        print("isDraft:", msg.get("isDraft"))
         
         if msg.get("hasAttachments"):
             message_id = msg.get('id')

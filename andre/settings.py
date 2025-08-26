@@ -170,6 +170,10 @@ CELERY_BEAT_SCHEDULE = {
     "calendar_event_retrieve_task": {
         "task": "microsoft.tasks.calendar_event_retrieve",
         "schedule": crontab(minute="*/3")
+    },
+    "calendar_event_notification": {
+        "task": "microsoft.tasks.calender_email_notification",
+        "schedule": crontab(minute="*/3")
     }
 }
 
@@ -179,3 +183,12 @@ AZURE_API_KEY = os.getenv("AZURE_API_KEY")
 AZURE_API_VERSION = os.getenv("AZURE_API_VERSION")
 AZURE_DEPLOYMENT = os.getenv("AZURE_DEPLOYMENT")
 AZURE_ENDPOINT = os.getenv("AZURE_ENDPOINT")
+
+# EMAIL BACKEND
+EMAIL_BACKEND = os.getenv("EMAIL_BACKEND")
+EMAIL_HOST = os.getenv("EMAIL_HOST")
+EMAIL_PORT = int(os.getenv("EMAIL_PORT"))
+EMAIL_USE_TLS = bool(os.getenv("EMAIL_USE_TLS"))
+EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER")
+EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD")
+DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
