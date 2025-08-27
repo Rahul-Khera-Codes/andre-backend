@@ -16,6 +16,7 @@ from rest_framework_simplejwt.tokens import (
     RefreshToken
 )
 
+from ..client import clients
 from ..exceptions import (
     UserTokenNotFound
 )
@@ -29,10 +30,16 @@ from ..utils.auth import (
     get_tokens_for_user,
     verify_access_token
 )
+from ..utils.storage import (
+    create_container,
+    get_container_client,
+    generate_container_name
+)
 from ..tasks import new_user_mail_sync
 from ..serializers import (
     EmailMessageSerializer,
-    MicrosoftConnectAccountSerializer
+    MicrosoftConnectAccountSerializer,
+    RefreshTokenSerailizer
 )
 
 
@@ -67,13 +74,26 @@ class MicrosoftConnectVerify(APIView):
             account = MicrosoftConnectedAccounts.objects.filter(microsoft_id=microsoft_id).first()
             
             if account:
+                print("Container name:", account.container_name)
+                if not account.container_name:
+                    container_name = generate_container_name(account.given_name, account.surname)
+                    container_client = get_container_client(clients.blob_service_client, container_name)
+                    create_container(container_client)
+                    account.container_name = container_name
+                
                 account.access_token = access_token
                 account.refresh_token = refresh_token
                 account.save()
-                            
+            
+                
             if not account:
+                container_name = generate_container_name(given_name, surname)
+                container_client = get_container_client(clients.blob_service_client, container_name)
+                create_container(container_client)
+                
                 account = MicrosoftConnectedAccounts.objects.create(
-                    access_token=access_token, 
+                    access_token=access_token,
+                    container_name=container_name, 
                     display_name=display_name, 
                     given_name=given_name, 
                     mail_id=mail,
@@ -82,10 +102,9 @@ class MicrosoftConnectVerify(APIView):
                     surname=surname,
                     user_principal_name=user_principal_name,
                 )
-            new_user_mail_sync.delay(access_token, account.id)
-            
+                
+                new_user_mail_sync.delay(access_token, account.id)
             microsoft_id = account.microsoft_id
-            
             
         except Exception as e:
             print(e)
@@ -97,12 +116,12 @@ class MicrosoftConnectVerify(APIView):
 class GetConnectedAccounts(APIView):    
     def get(self, request):
         microsoft_id = request.GET.get("mid")
-        account = MicrosoftConnectedAccounts.objects.filter(microsoft_id=microsoft_id)
-        if len(account) == 0:
+        account = MicrosoftConnectedAccounts.objects.filter(microsoft_id=microsoft_id).first()
+        if not account:
             return Response({"message": "User doesnot exists"}, status=status.HTTP_400_BAD_REQUEST)
         
         account_info = {}
-        account = account[0]
+        account = account
         
         token_data = get_tokens_for_user(account)
         access_token = token_data.get("access")
@@ -149,11 +168,9 @@ class GetConnectedAccounts(APIView):
         return Response(response, status=status.HTTP_200_OK)
     
 
-
-
 class RefreshTokenView(APIView):
     def post(self, request):
-        refresh_token = request.data.get("refresh_token")
+        refresh_token = request.data.get("token")
         if not refresh_token:
             return Response({"error": "Refresh token required"}, status=status.HTTP_400_BAD_REQUEST)
         
@@ -165,7 +182,10 @@ class RefreshTokenView(APIView):
             user_token_obj.access_token = new_access_token
             user_token_obj.save()
             
-            return Response({'access_token': new_access_token}, status=status.HTTP_201_CREATED)            
+            data = {'token': new_access_token}
+            serializers = RefreshTokenSerailizer(data)
+            
+            return Response(serializers.data, status=status.HTTP_201_CREATED)            
             
         except ExpiredTokenError as e:
             return Response({"error": "Token expired, please login again"}, status=status.HTTP_401_UNAUTHORIZED)

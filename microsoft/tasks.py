@@ -1,4 +1,6 @@
-import json, time
+import base64
+import json
+import time
 from datetime import (
     date, 
     datetime, 
@@ -6,11 +8,13 @@ from datetime import (
     timezone
 )
 from traceback import format_exc
+import uuid
 
 from celery import shared_task
 # from django.core.mail import send_mail
 from django.utils import timezone as django_timezone
 
+from .client import clients
 from .graph import summarize_email_content
 from .models import (
     Calender,
@@ -18,15 +22,20 @@ from .models import (
     MicrosoftConnectedAccounts, 
     Summarization
 )
+from .utils.storage import (
+    get_container_client,
+    upload_files_to_container
+)
 from .utils import (
     create_calendar_event,
+    get_attachments,
     get_calendar_event,
     get_folder_map,
     get_mail_messages,
     get_mail_messages_loop_all,
     get_refresh_token,
     get_unique_body,
-    send_mail
+    send_mail,
 )
 from .exceptions import MSInvalidTokenError
 
@@ -101,8 +110,14 @@ def mail_retrieve():
                         folder_id = value.get('parentFolderId')
                         email_payload['folder_id'] = folder_id
                         email_payload['folder_name'] = folder_mapping.get(folder_id)
+                                
+                        # sentDateTime,receivedDateTime
+                        email_payload['send_date_time'] = value.get('sentDateTime')
+                        email_payload['received_date_time'] = value.get('receivedDateTime')
+                        email_payload['has_attachments']= value.get('hasAttachments')
+                        email_payload["attachment_content_type"] = value.get("contentType")
                         
-                        email_payload['message_id'] = value.get('id')
+                        email_payload['message_id'] = message_id
                         email_payload['subject'] = value.get('subject')
                         email_payload['body_preview'] = value.get('bodyPreview')
                         email_payload['content'] = value['body']['content']
@@ -122,6 +137,37 @@ def mail_retrieve():
         
                         email: EmailMessages = EmailMessages.objects.create(**email_payload, microsoft=account)
                         
+                        # process files attachments
+                        print("Has attachments:", email.has_attachments)
+                        if email.has_attachments:
+                            status_code, response = get_attachments(access_token, message_id)
+                            print("Attachments response:", response)
+                            if status_code != 200:
+                                status_code, response = get_refresh_token(refresh_token)
+                                if status_code != 200:
+                                    raise MSInvalidTokenError("Microsoft token expired")
+                            
+                                response = response.json()
+                                access_token = response.get('access_token')
+                                refresh_token = response.get('refresh_token')
+                                account.access_token  = access_token
+                                account.refresh_token = refresh_token
+                                account.save()
+                        
+                            status_code, response = get_attachments(access_token, message_id)
+                            values = response.get('value')
+                            for file in values:
+                                file_name, content_base64 = file.get('name'), file.get("contentBytes")
+                                file_extension = file_name.split('.')[-1]
+                                content_bytes = base64.b64decode(content_base64)
+                                unique_file_id = uuid.uuid4().__str__() + f".{file_extension}"
+                                container_client = get_container_client(clients.blob_service_client, account.container_name)
+                                upload_files_to_container(container_client, unique_file_id, content_bytes, file_name)
+                                email.attachment_ids.append(unique_file_id)
+                                email.save()
+                                print(f"File {unique_file_id} saved successfully for {account.given_name}")
+                                    
+                                
                         # if value.get('from').get('emailAddress').get("address") == account.mail_id: continue
                             
                         summarized_content = summarize_email_content(email_content=email.unique_body, subject=email.subject)
@@ -293,7 +339,7 @@ def new_user_mail_sync(access_token, account):
         try:
             folder_mapping = get_folder_map(access_token=access_token)
         except MSInvalidTokenError as e:
-            status_code, response = refresh_token(refresh_token)
+            status_code, response = get_refresh_token(refresh_token)
             
             if status_code != 200:
                 raise MSInvalidTokenError('Microsoft token expired, please login again')
@@ -328,7 +374,14 @@ def new_user_mail_sync(access_token, account):
                 email_payload['folder_id'] = folder_id
                 email_payload['folder_name'] = folder_mapping.get(folder_id)
                 
-                email_payload['message_id'] = value.get('id')
+                # sentDateTime,receivedDateTime
+                email_payload['send_date_time'] = value.get('sentDateTime')
+                email_payload['received_date_time'] = value.get('receivedDateTime')
+                email_payload['has_attachments']= value.get('hasAttachments')
+                email_payload["attachment_content_type"] = value.get("contentType")
+                # if not email_payload['has_attachments']:
+                #     continue
+                email_payload['message_id'] = message_id
                 email_payload['subject'] = value.get('subject')
                 email_payload['body_preview'] = value.get('bodyPreview')
                 email_payload['content'] = value['body']['content']
@@ -348,8 +401,39 @@ def new_user_mail_sync(access_token, account):
 
                 email: EmailMessages = EmailMessages.objects.create(**email_payload, microsoft=account)
                 
+                # process files attachments
+                print("Has attachments:", email.has_attachments)
+                if email.has_attachments:
+                    status_code, response = get_attachments(access_token, message_id)
+                    print("Attachments response:", response)
+                    if status_code != 200:
+                        status_code, response = get_refresh_token(refresh_token)
+                        if status_code != 200:
+                            raise MSInvalidTokenError("Microsoft token expired")
+                    
+                        response = response.json()
+                        access_token = response.get('access_token')
+                        refresh_token = response.get('refresh_token')
+                        account.access_token  = access_token
+                        account.refresh_token = refresh_token
+                        account.save()
+                
+                    status_code, response = get_attachments(access_token, message_id)
+                    values = response.get('value')
+                    for file in values:
+                        file_name, content_base64 = file.get('name'), file.get("contentBytes")
+                        file_extension = file_name.split('.')[-1]
+                        content_bytes = base64.b64decode(content_base64)
+                        unique_file_id = uuid.uuid4().__str__() + f".{file_extension}"
+                        container_client = get_container_client(clients.blob_service_client, account.container_name)
+                        upload_files_to_container(container_client, unique_file_id, content_bytes, file_name)
+                        email.attachment_ids.append(unique_file_id)
+                        email.save()
+                        print(f"File {unique_file_id} saved successfully for {account.given_name}")
+                            
+                        
                 summarized_content = summarize_email_content(email_content=email.unique_body, subject=email.subject)
-                print(summarized_content)
+                # print(summarized_content)
                 summarized_email_content = summarized_content.get("summary")
                 summarized_calendar_task = summarized_content.get("calendar", None)
                 summarized_email_reply = summarized_content.get("reply")
@@ -476,7 +560,7 @@ def new_user_mail_sync_all(access_token, account):
                 email_payload['folder_id'] = folder_id
                 email_payload['folder_name'] = folder_mapping.get(folder_id)
                 
-                email_payload['message_id'] = value.get('id')
+                email_payload['message_id'] = message_id
                 email_payload['subject'] = value.get('subject')
                 email_payload['body_preview'] = value.get('bodyPreview')
                 email_payload['content'] = value['body']['content']

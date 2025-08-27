@@ -8,7 +8,7 @@ from typing import (
 from django.conf import settings
 from langgraph.graph import StateGraph
 
-from .client import client_azure_openai
+from .client import clients
 from .prompts import generate_email_summary_and_events
 
 
@@ -26,7 +26,7 @@ def call_with_retry(state: State, retries: int = 3, delay: int = 2) -> dict:
     
     for attempt in range(1, retries + 1):
         try:
-            resp = client_azure_openai.chat.completions.create(
+            resp = clients.client_azure_openai.chat.completions.create(
                 model=settings.AZURE_DEPLOYMENT,
                 messages=[
                     {"role": "system", "content": "You are a JSON-only API. Always return valid JSON."},

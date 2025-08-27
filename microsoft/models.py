@@ -1,6 +1,7 @@
 from django.db import models
 from django.contrib.postgres.fields import ArrayField
 from django.utils import timezone as django_timezone
+from django.utils.translation import gettext_lazy as _
 
 class UserToken(models.Model):
     access_token = models.CharField()
@@ -12,6 +13,8 @@ class UserToken(models.Model):
 
 class MicrosoftConnectedAccounts(models.Model):
     access_token = models.TextField(null=False)
+    container_name = models.TextField(blank=True, null=True)
+    created = models.DateTimeField(auto_now_add=True)
     display_name =  models.CharField( null=True)
     given_name = models.CharField(null=False, blank=False)
     mail_id = models.CharField(null=False, blank=False)
@@ -19,19 +22,23 @@ class MicrosoftConnectedAccounts(models.Model):
     refresh_token = models.TextField(null=False)
     surname = models.CharField(null=True)
     user_principal_name = models.CharField(null=False, blank=False)
-    created = models.DateTimeField(auto_now_add=True)
     updated = models.DateTimeField(auto_now=True)
 
 
 class EmailMessages(models.Model):
+    attachment_ids = ArrayField(models.TextField(null=True), default=list)
+    attachment_content_type = models.CharField(null=True, blank=True)
     body_preview = models.CharField(null=False)
     content = models.CharField(null=False)
     conversation_id = models.CharField(null=True)
     folder_id = models.CharField()
     folder_name = models.CharField()
+    has_attachments = models.BooleanField(default=False)
     mail_time = models.DateTimeField(null=True)
     message_id = models.CharField(null=False)
     microsoft = models.ForeignKey(MicrosoftConnectedAccounts, on_delete=models.CASCADE, related_name="email_message")
+    received_date_time = models.DateTimeField()
+    send_date_time = models.DateTimeField()
     sender_email = models.CharField(null=True)
     subject = models.CharField(blank=True, null=True)
     to_recipient_emails = ArrayField(models.CharField(null=True), default=list)
@@ -41,10 +48,22 @@ class EmailMessages(models.Model):
     updated = models.DateTimeField(auto_now=True)
 
 
+# class Documents(models.Model):
+#     microsoft = models.ForeignKey(MicrosoftConnectedAccounts, on_delete=models.CASCADE, related_name="documents")
+#     content_type = models.CharField(blank=True, null=True)
+#     document_ids = 
+
+
+class SummarizationChoices(models.TextChoices):
+    EMAIL = "EML", _("Email")
+    EMAIL_ATTACHMENT = "EMA", _("Attachments")
+    DOCUMENts = "DOC", _("Documents")
+
 class Summarization(models.Model):
     email = models.ForeignKey(EmailMessages, on_delete=models.CASCADE, blank=True, null=True, related_name="summarization")
     microsoft = models.ForeignKey(MicrosoftConnectedAccounts, on_delete=models.CASCADE, related_name="summarization")
     summary = models.CharField(null=False)
+    summary_type = models.CharField(max_length=3, choices=SummarizationChoices, default=SummarizationChoices.EMAIL)
     created = models.DateTimeField(auto_now_add=True)
     updated = models.DateTimeField(auto_now=True)
     

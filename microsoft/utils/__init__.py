@@ -36,9 +36,9 @@ def get_mail_messages(access_token, time_filter: str | None = None, new_user: bo
     # if new_user is True, fetch latest 50 emails.
     # else user time_filter for background sync jjobs
     if new_user:
-        url = f"https://graph.microsoft.com/v1.0/me/messages?$top=50&$orderBy=receivedDateTime asc&$select=id,subject,from,sender,receivedDateTime,bodyPreview,uniqueBody,body,toRecipients,isDraft,parentFolderId"
+        url = f"https://graph.microsoft.com/v1.0/me/messages?$top=50&$orderBy=receivedDateTime asc&$select=id,subject,from,sender,receivedDateTime,bodyPreview,uniqueBody,body,toRecipients,isDraft,parentFolderId,hasAttachments,sentDateTime,receivedDateTime"
     else:
-        url = f"https://graph.microsoft.com/v1.0/me/messages?$filter=receivedDateTime ge {time_filter}&$orderBy=receivedDateTime asc&$select=id,subject,sender,from,receivedDateTime,bodyPreview,uniqueBody,body,toRecipients,isDraft,parentFolderId"
+        url = f"https://graph.microsoft.com/v1.0/me/messages?$filter=receivedDateTime ge {time_filter}&$orderBy=receivedDateTime asc&$select=id,subject,sender,from,receivedDateTime,bodyPreview,uniqueBody,body,toRecipients,isDraft,parentFolderId,hasAttachments,sentDateTime,receivedDateTime"
         
     headers = {
         "Authorization": f"Bearer {access_token}",
@@ -183,3 +183,11 @@ def get_folder_map(access_token: str):
         url = data.get("@odata.nextLink")
 
     return folder_map
+
+def get_attachments(access_token: str, message_id: str) -> tuple[int, list[dict]]:
+    headers = {
+        "Authorization": f"Bearer {access_token}"
+    }
+    url_attachment_lists = 'https://graph.microsoft.com/v1.0/me/messages/{}/attachments'
+    response = requests.get(url_attachment_lists.format(message_id), headers=headers)
+    return response.status_code, response.json()

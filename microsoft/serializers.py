@@ -105,5 +105,11 @@ class EmailMessageSerializer(serializers.ModelSerializer):
             "sender_email",
             "subject",
             "summarization",
-            "to_recipient_emails"
+            "to_recipient_emails",
+            "received_date_time",
+            "send_date_time",
         )
+        
+        
+class RefreshTokenSerailizer(serializers.Serializer):
+    token = serializers.CharField()
