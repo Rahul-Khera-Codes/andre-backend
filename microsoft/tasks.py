@@ -92,8 +92,8 @@ def mail_retrieve():
                         raise MSInvalidTokenError('Microsoft token expired, please login again')
                     
                 response = response.json()
-
                 values = response.get('value')[::-1]
+                
                 if values:
                     for value in values:
                         email_payload = {}
@@ -117,7 +117,7 @@ def mail_retrieve():
                         email_payload['has_attachments']= value.get('hasAttachments')
                         email_payload["attachment_content_type"] = value.get("contentType")
                         
-                        email_payload['message_id'] = message_id
+                        # email_payload['message_id'] = message_id
                         email_payload['subject'] = value.get('subject')
                         email_payload['body_preview'] = value.get('bodyPreview')
                         email_payload['content'] = value['body']['content']
@@ -135,13 +135,16 @@ def mail_retrieve():
                         email_payload['to_recipient_emails'] = to_recipient_emails
                         email_payload['mail_time'] = value.get('createdDateTime')
         
-                        email: EmailMessages = EmailMessages.objects.create(**email_payload, microsoft=account)
+                        
+                        email, created = EmailMessages.objects.get_or_create(**email_payload, message_id=message_id, microsoft=account)
+                        if not created: continue
+                        
                         
                         # process files attachments
                         print("Has attachments:", email.has_attachments)
                         if email.has_attachments:
                             status_code, response = get_attachments(access_token, message_id)
-                            print("Attachments response:", response)
+                            # print("Attachments response:", response)
                             if status_code != 200:
                                 status_code, response = get_refresh_token(refresh_token)
                                 if status_code != 200:
@@ -381,7 +384,7 @@ def new_user_mail_sync(access_token, account):
                 email_payload["attachment_content_type"] = value.get("contentType")
                 # if not email_payload['has_attachments']:
                 #     continue
-                email_payload['message_id'] = message_id
+                # email_payload['message_id'] = message_id
                 email_payload['subject'] = value.get('subject')
                 email_payload['body_preview'] = value.get('bodyPreview')
                 email_payload['content'] = value['body']['content']
@@ -399,13 +402,14 @@ def new_user_mail_sync(access_token, account):
                 email_payload['to_recipient_emails'] = to_recipient_emails
                 email_payload['mail_time'] = value.get('createdDateTime')
 
-                email: EmailMessages = EmailMessages.objects.create(**email_payload, microsoft=account)
+                email, created = EmailMessages.objects.get_or_create(**email_payload, message_id=message_id, microsoft=account)
+                if not created: continue
                 
                 # process files attachments
                 print("Has attachments:", email.has_attachments)
                 if email.has_attachments:
                     status_code, response = get_attachments(access_token, message_id)
-                    print("Attachments response:", response)
+                    # print("Attachments response:", response)
                     if status_code != 200:
                         status_code, response = get_refresh_token(refresh_token)
                         if status_code != 200:

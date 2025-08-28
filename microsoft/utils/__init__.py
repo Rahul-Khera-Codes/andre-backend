@@ -31,14 +31,14 @@ def get_user_info(access_token):
     return response.status_code, response.json()
 
 
-def get_mail_messages(access_token, time_filter: str | None = None, new_user: bool = True):
+def get_mail_messages(access_token, time_filter: str | None = None, new_user: bool = False):
     
     # if new_user is True, fetch latest 50 emails.
     # else user time_filter for background sync jjobs
     if new_user:
-        url = f"https://graph.microsoft.com/v1.0/me/messages?$top=50&$orderBy=receivedDateTime asc&$select=id,subject,from,sender,receivedDateTime,bodyPreview,uniqueBody,body,toRecipients,isDraft,parentFolderId,hasAttachments,sentDateTime,receivedDateTime"
+        url = f"https://graph.microsoft.com/v1.0/me/messages?$top=50&$orderBy=receivedDateTime asc&$select=id,subject,from,sender,receivedDateTime,bodyPreview,uniqueBody,body,toRecipients,isDraft,parentFolderId,hasAttachments,sentDateTime,receivedDateTime,createdDateTime,conversationId"
     else:
-        url = f"https://graph.microsoft.com/v1.0/me/messages?$filter=receivedDateTime ge {time_filter}&$orderBy=receivedDateTime asc&$select=id,subject,sender,from,receivedDateTime,bodyPreview,uniqueBody,body,toRecipients,isDraft,parentFolderId,hasAttachments,sentDateTime,receivedDateTime"
+        url = f"https://graph.microsoft.com/v1.0/me/messages?$filter=receivedDateTime ge {time_filter}&$orderBy=receivedDateTime asc&$select=id,subject,sender,from,receivedDateTime,bodyPreview,uniqueBody,body,toRecipients,isDraft,parentFolderId,hasAttachments,sentDateTime,receivedDateTime,createdDateTime,conversationId"
         
     headers = {
         "Authorization": f"Bearer {access_token}",

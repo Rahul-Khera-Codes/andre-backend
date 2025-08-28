@@ -113,3 +113,9 @@ class EmailMessageSerializer(serializers.ModelSerializer):
         
 class RefreshTokenSerailizer(serializers.Serializer):
     token = serializers.CharField()
+    
+class DraftSerializer(serializers.Serializer):
+    filter = serializers.CharField()
+    body = serializers.CharField()
+    recipients = serializers.ListField(child=serializers.CharField(), required=False, default=[])
+    subject = serializers.CharField(required=False, default='')

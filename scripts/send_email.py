@@ -6,9 +6,9 @@ import requests
 load_dotenv()
 
 ACCESS_TOKEN = os.getenv("ACCESS_TOKEN")
-GRAPH_API_ENDPOINT = "https://graph.microsoft.com/v1.0/me/messages"
+GRAPH_API_ENDPOINT = "https://graph.microsoft.com/v1.0/me/sendMail"
 
-def create_draft_mail(access_token: str, subject: str, body: str, to_recipients: list):
+def send_outlook_mail(access_token: str, subject: str, body: str, to_recipients: list):
     """
     Create a draft email in Outlook using Microsoft Graph API.
     
@@ -24,28 +24,38 @@ def create_draft_mail(access_token: str, subject: str, body: str, to_recipients:
     }
 
     # Format recipients
-    recipients = [{"emailAddress": {"address": addr}} for addr in to_recipients]
+    # recipients = [{"emailAddress": {"address": addr}} for addr in to_recipients]
+    recipients = [
+        {
+            "emailAddress": {
+                "address": "losteaglefound@gmail.com"
+            }
+        }
+    ]
 
     FROM = 'rahul.excel2011@gmail.com'
 
     # Draft message payload
-    message = {
-        "from": {
-            "emailAddress": {
-                "address": FROM
-            }
-        },
-        "subject": subject,
-        "body": {
-            "contentType": "HTML",
-            "content": body
-        },
-        "toRecipients": recipients
+    payload = {
+        "message": {
+            "from": {
+                "emailAddress": {
+                    "address": FROM
+                }
+            },
+            "subject": subject,
+            "body": {
+                "contentType": "HTML",
+                "content": body
+            },
+            "toRecipients": recipients
+        }    
     }
+    
 
-    response = requests.post(GRAPH_API_ENDPOINT, headers=headers, json=message)
+    response = requests.post(GRAPH_API_ENDPOINT, headers=headers, json=payload)
 
-    if response.status_code in (200, 201):
+    if response.status_code in (200, 201, 202):
         return response.json()  # Draft created successfully
     else:
         raise Exception(f"Error {response.status_code}: {response.text}")
@@ -54,7 +64,7 @@ def create_draft_mail(access_token: str, subject: str, body: str, to_recipients:
 # Example token and call (replace with a real token)
 token = ACCESS_TOKEN
 
-draft = create_draft_mail(
+draft = send_outlook_mail(
     access_token=token,
     subject="Draft: Meeting Reminder",
     body="<p>Today date is 28 August 2025.</p>",

@@ -23,6 +23,19 @@ class MicrosoftConnectedAccounts(models.Model):
     surname = models.CharField(null=True)
     user_principal_name = models.CharField(null=False, blank=False)
     updated = models.DateTimeField(auto_now=True)
+    
+    @property
+    def is_authenticated(self):
+        """Always return True for authenticated Microsoft accounts."""
+        return True
+
+    @property
+    def is_anonymous(self):
+        """For compatibility with Django's auth system."""
+        return False
+
+    def __str__(self):
+        return self.email
 
 
 class EmailMessages(models.Model):
@@ -35,15 +48,22 @@ class EmailMessages(models.Model):
     folder_name = models.CharField()
     has_attachments = models.BooleanField(default=False)
     mail_time = models.DateTimeField(null=True)
-    message_id = models.CharField(null=False)
+    message_id = models.CharField(null=False, unique=True)
     microsoft = models.ForeignKey(MicrosoftConnectedAccounts, on_delete=models.CASCADE, related_name="email_message")
     received_date_time = models.DateTimeField()
+    reply = models.CharField(blank=True, null=True)
+    reply_id = models.ForeignKey(
+        'self',
+        on_delete=models.SET_NULL,
+        blank=True,
+        null=True,
+        related_name="draft_message"
+    )
     send_date_time = models.DateTimeField()
     sender_email = models.CharField(null=True)
     subject = models.CharField(blank=True, null=True)
     to_recipient_emails = ArrayField(models.CharField(null=True), default=list)
     unique_body = models.CharField(blank=True, null=False)
-    reply = models.CharField(blank=True, null=True)
     created = models.DateTimeField(auto_now_add=True)
     updated = models.DateTimeField(auto_now=True)
 

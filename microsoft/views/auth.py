@@ -1,34 +1,24 @@
 import os
+from traceback import format_exc
 
 from django.shortcuts import redirect
 import requests
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from rest_framework.permissions import IsAuthenticated
-from rest_framework_simplejwt.exceptions import (
-    ExpiredTokenError,
-    InvalidToken,
-    TokenError
-)
 from rest_framework_simplejwt.tokens import (
-    AccessToken,
     RefreshToken
 )
 
 from ..client import clients
-from ..exceptions import (
-    UserTokenNotFound
-)
 from ..models import (
-    EmailMessages,
     MicrosoftConnectedAccounts,
     UserToken
 )
 from ..utils import generate_access_token, get_refresh_token, get_user_info
 from ..utils.auth import (
+    get_callback_session_id,
     get_tokens_for_user,
-    verify_access_token
 )
 from ..utils.storage import (
     create_container,
@@ -37,11 +27,9 @@ from ..utils.storage import (
 )
 from ..tasks import new_user_mail_sync
 from ..serializers import (
-    EmailMessageSerializer,
     MicrosoftConnectAccountSerializer,
     RefreshTokenSerailizer
 )
-
 
 
 class MicrosoftConnectVerify(APIView):
@@ -105,23 +93,23 @@ class MicrosoftConnectVerify(APIView):
                 
                 new_user_mail_sync.delay(access_token, account.id)
             microsoft_id = account.microsoft_id
+            session_id = get_callback_session_id(mid = account.microsoft_id)
             
         except Exception as e:
             print(e)
             return redirect(f"{os.getenv("FRONTEND_URL")}/dashboard?response=error", status=status.HTTP_302_FOUND)
         
-        return redirect(f"{os.getenv("FRONTEND_URL")}/dashboard?response=success&mid={microsoft_id}", status=status.HTTP_302_FOUND)
+        return redirect(f"{os.getenv("FRONTEND_URL")}/dashboard?response=success&mid={microsoft_id}&sid={session_id}", status=status.HTTP_302_FOUND)
     
     
 class GetConnectedAccounts(APIView):    
     def get(self, request):
         microsoft_id = request.GET.get("mid")
+        session_id = request.GET.get("sid")
+        print("MID:", microsoft_id, "SID:", session_id)
         account = MicrosoftConnectedAccounts.objects.filter(microsoft_id=microsoft_id).first()
         if not account:
             return Response({"message": "User doesnot exists"}, status=status.HTTP_400_BAD_REQUEST)
-        
-        account_info = {}
-        account = account
         
         token_data = get_tokens_for_user(account)
         access_token = token_data.get("access")
@@ -144,21 +132,8 @@ class GetConnectedAccounts(APIView):
         
         if not user_token_obj:
             return Response({"error": f"Error in creating user token: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-        
-        # account_info['access_token'] = access_token
-        # account_info['id'] = account.id
-        # account_info['microsoft_id'] = account.microsoft_id
-        # account_info['mail_id'] = account.mail_id
-        # account_info['given_name'] = account.given_name
-        # account_info['surname'] = account.surname
-        # account_info['user_principal_name'] = account.user_principal_name
-        # account_info['display_name'] = account.display_name
-        # account_info['refresh_token'] = refresh_token
-        
-        # serializer = MicrosoftConnectAccountSerializer(account_info)
-        
-        serializer = MicrosoftConnectAccountSerializer(account)
-        
+
+        serializer = MicrosoftConnectAccountSerializer(account)        
         response = serializer.data
         response.update({
             "access_token": user_token_obj.access_token,
@@ -171,14 +146,18 @@ class GetConnectedAccounts(APIView):
 class RefreshTokenView(APIView):
     def post(self, request):
         refresh_token = request.data.get("token")
+        print("Refresh token:", refresh_token)
         if not refresh_token:
             return Response({"error": "Refresh token required"}, status=status.HTTP_400_BAD_REQUEST)
         
         try:
+            user_token_obj = UserToken.objects.filter(refresh_token=refresh_token).first()
+            if not user_token_obj:
+                return Response({"error": "Invalid refresh token, please login again"}, status=status.HTTP_401_UNAUTHORIZED)
+            
             refresh = RefreshToken(refresh_token)
             new_access_token = refresh.access_token
             
-            user_token_obj = UserToken.objects.filter(refresh_token=refresh_token).first()
             user_token_obj.access_token = new_access_token
             user_token_obj.save()
             
@@ -186,16 +165,8 @@ class RefreshTokenView(APIView):
             serializers = RefreshTokenSerailizer(data)
             
             return Response(serializers.data, status=status.HTTP_201_CREATED)            
-            
-        except ExpiredTokenError as e:
-            return Response({"error": "Token expired, please login again"}, status=status.HTTP_401_UNAUTHORIZED)
-        
-        except InvalidToken as e:
-            return Response({"error": "Invalid expired, please login again"}, status=status.HTTP_401_UNAUTHORIZED)
-        
-        except TokenError as e:
-            return Response({"error": "Token error, please login again"}, status=status.HTTP_401_UNAUTHORIZED)
-        
+
         except Exception as e:
-            return Response({"error": "Internal error"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            print(format_exc())
+            return Response({"error": f"Internal error: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 

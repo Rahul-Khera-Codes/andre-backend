@@ -1,3 +1,7 @@
+import base64
+from datetime import datetime, timedelta, timezone
+import json
+
 from rest_framework_simplejwt.tokens import (
     AccessToken,
     RefreshToken
@@ -9,7 +13,23 @@ from ..models import (
 )
 
 
-def get_tokens_for_user(user: MicrosoftConnectedAccounts):
+def get_callback_session_id(mid: str):
+    future5 = (datetime.now(timezone.utc) + timedelta(minutes=5)).isoformat()
+    future5_data = {
+        'expire_at': future5,
+        'mid': mid
+    }
+    future5_json = json.dumps(future5_data)
+    future5_bytes = future5_json.encode('utf-8')
+    future5_base64 = base64.b64encode(future5_bytes)
+    return future5_base64.decode('utf-8')
+
+
+def get_tokens_for_user(user: MicrosoftConnectedAccounts) -> dict[str, str]:
+    """
+    This function return the data user token for access the website.
+    :param user: MicrosoftConnectedAccount instance
+    """
     refresh = RefreshToken.for_user(user)
     refresh['id'] = user.id
     refresh['microsoft_id'] = user.microsoft_id
@@ -25,7 +45,11 @@ def get_tokens_for_user(user: MicrosoftConnectedAccounts):
     
 
 def verify_access_token(token_str):
-    # Decode and verify token
+    """
+    Decode and verify token. Return the `MicrosoftConnectAccounts` object.
+    
+    :param token_str: access token of user.
+    """
     
     if not UserToken.objects.filter(access_token=token_str).exists():
         return None
