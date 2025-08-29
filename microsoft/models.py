@@ -101,3 +101,38 @@ class Calender(models.Model):
     created = models.DateTimeField(auto_now_add=True)
     updated = models.DateTimeField(auto_now=True)
     
+    
+class VectorStore(models.Model):
+    vector_store_id = models.CharField(max_length=64, unique=True)
+    microsoft = models.ForeignKey(MicrosoftConnectedAccounts, on_delete=models.SET_NULL, null=True, related_name="vector_store")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.vector_store_id} ({self.client_id})"
+
+
+class Session(models.Model):
+    session_id = models.CharField(max_length=64, unique=True)
+    microsoft = models.ForeignKey(MicrosoftConnectedAccounts, on_delete=models.SET_NULL, related_name="session", null=True)
+    vector_store = models.ForeignKey(VectorStore, on_delete=models.CASCADE, related_name='sessions')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.session_id
+    
+
+
+class Message(models.Model):
+    session = models.ForeignKey(Session, on_delete=models.CASCADE, related_name='messages')
+    role = models.CharField(max_length=16, choices=[('user', 'User'), ('assistant', 'Assistant')])
+    content = models.TextField()
+    timestamp = models.DateTimeField(auto_now_add=True)
+    
+    def to_dict(self) -> dict:
+        return {
+            "role": self.role,
+            "content": self.content
+        }
+
+    def __str__(self):
+        return f"[{self.role}] {self.content[:40]}"

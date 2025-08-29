@@ -3,6 +3,7 @@ from django.urls import path
 from rest_framework_simplejwt.views import TokenRefreshView
 
 from .views.dashboard import DashboardView
+from .views.ai import DocumentSummarize
 from .views.email import (
     GetUserMail,
     GetMailFolder
@@ -19,6 +20,7 @@ from .views.calendar import (
 
 urlpatterns = [
     path("dashboard/", DashboardView.as_view(), name='dashboard'),
+    path("summarize/", DocumentSummarize.as_view(), name="summarize"),
     path('oauth/outlook/callback/', MicrosoftConnectVerify.as_view(), name='outlook_oauth'),
     path('get/microsoft/accounts', GetConnectedAccounts.as_view(), name='get_microsoft_accounts'),
     path("get/mails/", GetUserMail.as_view(), name="get_user_mail"),

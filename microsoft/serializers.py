@@ -119,3 +119,8 @@ class DraftSerializer(serializers.Serializer):
     body = serializers.CharField()
     recipients = serializers.ListField(child=serializers.CharField(), required=False, default=[])
     subject = serializers.CharField(required=False, default='')
+    
+
+class DocumentSerializer(serializers.Serializer):
+    file_type = serializers.CharField()
+    document = serializers.FileField()

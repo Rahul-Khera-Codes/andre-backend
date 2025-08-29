@@ -74,8 +74,28 @@ class GetUserMail(APIView):
                         print("Error response:", response)
                         return Response({"error": "error drafting mail"}, status=status.HTTP_400_BAD_REQUEST)
                 case "send_mail":
-                    ...
-            return Response({"message": "draft saved successfully"}, status=status.HTTP_201_CREATED)
+                    print("draft:", 4)
+                    recipients = serializer_mail.validated_data.get("recipients")
+                    if len(recipients) == 0:
+                        print(5)
+                        return Response({"error": "recipients for sending mail can't be empty"}, status=status.HTTP_400_BAD_REQUEST) 
+                    print(6)
+                    account: MicrosoftConnectedAccounts = request.user
+                    access_token = account.access_token
+                    status_code, response = send_outlook_mail(
+                        access_token=access_token,
+                        sender=account.mail_id,
+                        body=serializer_mail.validated_data.get('body'),
+                        body_content_type="html",
+                        subject=serializer_mail.validated_data.get("subject"),
+                        to_recipients=serializer_mail.validated_data.get("recipients")
+                    )
+                    if status_code not in (200, 201, 202):
+                        print("Error response:", response)
+                        return Response({"error": "error drafting mail"}, status=status.HTTP_400_BAD_REQUEST)
+                case _:
+                    return Response({"error": "Invalid mail request"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"message": "draft mail saved successfully"}, status=status.HTTP_201_CREATED)
         
         except Exception as e:
             print(format_exc())
