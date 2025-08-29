@@ -6,7 +6,7 @@ from openai import AzureOpenAI
 
 
 class Client:
-    azure_openai: AzureOpenAI | None
+    client_azure_openai: AzureOpenAI | None
     blob_service_client: BlobServiceClient | None
     
     @classmethod
