@@ -1,6 +1,7 @@
 import base64
 from datetime import datetime, timedelta, timezone
 import json
+import uuid
 
 from rest_framework_simplejwt.tokens import (
     AccessToken,
@@ -11,6 +12,9 @@ from ..models import (
     MicrosoftConnectedAccounts,
     UserToken
 )
+
+async def get_vector_store_name(account: MicrosoftConnectedAccounts) -> str:
+    return f"{account.given_name}-{account.surname}-{str(uuid.uuid4())[:8]}"
 
 
 def get_callback_session_id(mid: str):

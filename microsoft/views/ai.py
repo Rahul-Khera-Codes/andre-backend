@@ -2,7 +2,13 @@ from io import BytesIO
 from traceback import format_exc
 import uuid
 
+from adrf.views import APIView as AyncAPIView
+from django.conf import settings
 from django.core.files.uploadedfile import InMemoryUploadedFile
+from django.core.exceptions import (
+    MultipleObjectsReturned,
+    ObjectDoesNotExist
+)
 from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
@@ -10,15 +16,15 @@ from rest_framework.response import Response
 
 from ..client import clients
 from ..utils.auth import verify_access_token
-from ..utils.azure_ai import (
-    create_vector_store_for_client,
-    upload_files_to_vector_store,
-    ask_question_with_vector_search
-)
+from ..utils.azure_ai import TalkToYourDocument
 from ..models import EmailMessages
 from ..serializers import (
     DocumentSerializer,
     EmailMessageSerializer,
+)
+from ..serializers.aserializers import (
+    DocumentSerializerAsync,
+    EmailMessageSerializerAsync,
 )
 
 
@@ -35,18 +41,18 @@ class SummarizeEmailView(APIView):
             return Response({"error": f"Internal Error: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)    
         
         
-class DocumentSummarize(APIView):
+class DocumentSummarize(AyncAPIView):
     permission_classes = [IsAuthenticated]
     
-    def post(self, request):
+    async def post(self, request):
         try:
-            serializer = DocumentSerializer(data=request.data)
+            serializer = DocumentSerializerAsync(data=request.data)
             if not serializer.is_valid():
                 return Response({"error": "Invalid file"}, status=status.HTTP_400_BAD_REQUEST)
             
             document: InMemoryUploadedFile = serializer.validated_data.get("document")
-            content_bytes = document.read()
-            print("Type", type(content_bytes))
+            # content_bytes = document.read()
+            # print("Type", type(content_bytes))
             file_data = {
                 "name": document.name,
                 "size": document.size,
@@ -58,29 +64,44 @@ class DocumentSummarize(APIView):
             def wrapped_files(files):
                 wfiles = []
                 for f in files:
-                    if hasattr(f, "read"):  # InMemoryUploadedFile
-                        content = f.read()
-                        bio = BytesIO(content)
-                        bio.name = f.name if f.name else "document.pdf"  # must have valid extension
-                        f.seek(0)  # reset so Django can reuse if needed
-                        wfiles.append(bio)
-                    else:
-                        wfiles.append(f)
+                    # InMemoryUploadedFile
+                    content = f.read()
+                    bio = BytesIO(content)
+                    bio.name = f.name if f.name else "document.pdf"  # must have valid extension
+                    f.seek(0)  # reset so Django can reuse if needed
+                    wfiles.append(bio)
                 return wfiles
                         
             files = wrapped_files([document])
+            print("Files length:", len(files))
             
             account = request.user
-            session_id = str(uuid.uuid4())
-            vector_store = create_vector_store_for_client(clients.client_azure_openai, account)
-            upload_files_to_vector_store(clients.client_azure_openai, vector_store.id, files)
-            response = ask_question_with_vector_search(clients.client_azure_openai, MODEL, vector_store.id, session_id, question)
+            ttyd = TalkToYourDocument(account=account)
+            await ttyd.create_vector_store_for_client(clients.client_azure_openai)
+            await ttyd.get_or_create_session()
+            
+            print("vector_store:", await ttyd.vector_store_id)
+            print("Session id:", await ttyd.session_id)
+            await ttyd.upload_files_to_vector_store(clients.client_azure_openai, files)
+
+            response = await ttyd.ask_question_with_vector_search(
+                clients.client_azure_openai, 
+                settings.AZURE_MODEL_NAME,
+                question
+            )
             
             print(f"Name: {file_data['name']}, size: {file_data['size']}, type: {file_data["type"]}")
-            # print(dir(document))
-            
-            return Response({"message": response.output_text}, status=status.HTTP_201_CREATED  )
-                
+            file_data.update({"summary": response})
+            return Response({"message": file_data}, status=status.HTTP_201_CREATED  )
+        
+        except ObjectDoesNotExist as e:
+            model_class = e.__class__.model
+            print("Model:", model_class.__name__)
+        
+        except MultipleObjectsReturned as e:
+            model_class = e.__class__.model
+            print("Model:", model_class.__name__)
+            return Response({"error": f"Internal Error: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)        
         except Exception as e:
             print(format_exc())
             return Response({"error": f"Internal Error: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)    

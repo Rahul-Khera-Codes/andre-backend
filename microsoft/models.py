@@ -35,7 +35,7 @@ class MicrosoftConnectedAccounts(models.Model):
         return False
 
     def __str__(self):
-        return self.email
+        return self.mail_id
 
 
 class EmailMessages(models.Model):
@@ -103,7 +103,7 @@ class Calender(models.Model):
     
     
 class VectorStore(models.Model):
-    vector_store_id = models.CharField(max_length=64, unique=True)
+    vector_store_id = models.CharField(max_length=64, unique=True, blank=True, null=True)
     microsoft = models.ForeignKey(MicrosoftConnectedAccounts, on_delete=models.SET_NULL, null=True, related_name="vector_store")
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -114,7 +114,7 @@ class VectorStore(models.Model):
 class Session(models.Model):
     session_id = models.CharField(max_length=64, unique=True)
     microsoft = models.ForeignKey(MicrosoftConnectedAccounts, on_delete=models.SET_NULL, related_name="session", null=True)
-    vector_store = models.ForeignKey(VectorStore, on_delete=models.CASCADE, related_name='sessions')
+    vector_store = models.ForeignKey(VectorStore, on_delete=models.CASCADE, related_name='sessions', blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
