@@ -90,9 +90,9 @@ class Summarization(models.Model):
 
 class Calender(models.Model):
     body = models.CharField(null=True, blank=True)
-    event_id = models.CharField()
     end = models.DateTimeField()
     email = models.ForeignKey(EmailMessages, on_delete=models.CASCADE, blank=True, null=True, related_name="calendar")
+    event_id = models.CharField()
     location = models.CharField(blank=True, null=True)
     microsoft = models.ForeignKey(MicrosoftConnectedAccounts, on_delete=models.CASCADE, related_name="calendar")
     remainder_minutes_before_start = models.IntegerField()

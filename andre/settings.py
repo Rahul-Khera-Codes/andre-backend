@@ -51,6 +51,8 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework',
     'rest_framework_simplejwt',
+    "adrf",
+] + [
     'corsheaders',
     'celery',
     'microsoft',
@@ -84,7 +86,8 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'andre.wsgi.application'
+# WSGI_APPLICATION = 'andre.wsgi.application'
+ASGI_APPLICATION = 'andre.asgi.application'
 
 
 # Database

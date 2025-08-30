@@ -6,6 +6,8 @@ from datetime import (
 from traceback import format_exc
 import uuid
 
+from adrf.views import APIView as AsyncAPIView
+from asgiref.sync import sync_to_async
 from django.utils import timezone as django_timezone
 from rest_framework import status
 from rest_framework.views import APIView
@@ -19,32 +21,37 @@ from ..serializers import (
     CalenderSerializer,
     CalenderCreateSerializer
 )
+from ..serializers.aserializers import (
+    CalenderSerializerAsync,
+    CalenderCreateSerializerAsync
+)
 from ..utils import create_calendar_event
 
 
 
-class CalenderEventView(APIView):
+class CalenderEventView(AsyncAPIView):
     permission_classes = [IsAuthenticated]
     
-    def get(self, request):
+    async def get(self, request):
         try:
             now = django_timezone.now()
             # thresold = now + timezone(minutes=15)
-            
             events = Calender.objects.filter(microsoft=request.user, start__gt=now)
-            serializer = CalenderSerializer(events, many=True)
-            
-            return Response(serializer.data, status=status.HTTP_200_OK)
+            serializer = CalenderSerializerAsync(events, many=True)
+            # serializer_data = await sync_to_async(lambda: serializer.data)()
+            # return Response(serializer_data, status=status.HTTP_200_OK)
+            serializer_data = await serializer.adata
+            return Response(serializer_data, status=status.HTTP_200_OK)
 
         except Exception as e:
             print(format_exc())
             return Response({"error": "Internal Error"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)    
     
     
-    def post(self, request):
+    async def post(self, request):
         try:
                 
-            serializers = CalenderCreateSerializer(request.data)
+            serializers = CalenderCreateSerializer(data=request.data)
             if serializers.is_valid():
                 event_body = {
                     'subject': serializers.validated_data.get('subject'),
@@ -64,7 +71,7 @@ class CalenderEventView(APIView):
                     event_body['body'] = body
                 if location: event_body['location'] = location
                 
-                status_code, response = create_calendar_event(request.user.access_token, event_body)
+                status_code, response = await sync_to_async(lambda: create_calendar_event(request.user.access_token, event_body))()
                 if status_code not in (200, 201):
                     return Response({"error": "Error in creating calender event"}, status=status.HTTP_400_BAD_REQUEST)
                 
@@ -81,14 +88,14 @@ class CalenderEventView(APIView):
                     event_body['body'] = body
                 if location: event_body['location'] = location
                 
-                calender = Calender.objects.create(**event_body, microsoft=request.user)
+                calender = Calender.objects.acreate(**event_body, microsoft=request.user)
                 return Response({"message": "Calendar event created successfully"}, status=status.HTTP_201_CREATED)
         
         except Exception as e:
             return Response({"error": "Internal Error"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)    
 
 
-def generate_dummy_events():
+async def generate_dummy_events():
     events = []
     now_utc = datetime.now(timezone.utc)
 
@@ -117,23 +124,26 @@ def generate_dummy_events():
     return events
 
         
-class CalenderEventNotificationView(APIView):
+class CalenderEventNotificationView(AsyncAPIView):
     permission_classes = [IsAuthenticated]
     
-    def get(self, request):
+    async def get(self, request):
         try:
             now = django_timezone.now()
             thresold = now + timedelta(minutes=15)
-            events = Calender.objects.filter(microsoft=request.user, start__gt=now, start__lte=thresold)
+            events = await sync_to_async(
+                lambda: Calender.objects.filter(microsoft=request.user, start__gt=now, start__lte=thresold),
+                thread_sensitive=False
+            )()
             
-            if len(events) == 0:
-                events = generate_dummy_events()
+            if (await sync_to_async(lambda: len(events), thread_sensitive=False)()) == 0:
+                events = await generate_dummy_events()
                 return Response(events, status=status.HTTP_200_OK)
             
             else:
                 serializer = CalenderSerializer(events, many=True)
-                return Response(serializer.data, status=status.HTTP_200_OK)
+                return Response(serializer.adata, status=status.HTTP_200_OK)
             
         except Exception as e:
             print(format_exc())
-            return Response({"error": "Internal Error"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)    
+            return Response({"error": f"Internal Error: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)    

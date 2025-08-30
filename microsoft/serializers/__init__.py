@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 from typing import Literal
 
 from rest_framework import serializers
-from .models import (
+from ..models import (
     Calender,
     EmailMessages,
     MicrosoftConnectedAccounts,
