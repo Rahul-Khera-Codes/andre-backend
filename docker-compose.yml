@@ -11,6 +11,8 @@ services:
       - ./:/app/andre
     networks:
       - app_net
+    depends_on:
+      - redis
     # extra_hosts:
     #   - "host.docker.internal:host-gateway"
 
@@ -23,6 +25,7 @@ services:
       - ./:/app/andre
     command: ["celery", "-A", "andre", "worker",  "-l", "info"]
     depends_on:
+      - redis
       - backend
   
   celery_beat:  
@@ -34,7 +37,16 @@ services:
       - ./:/app/andre
     command: ["celery", "-A", "andre", "beat",  "-l", "info"]
     depends_on:
+      - redis
       - celery_worker
+  
+  redis:
+    image: redis:6.2-alpine
+    restart: always
+    # ports:
+    #   - "6379:6379"
+    # volumes:
+    #   - redis_data:/data
 
 networks:
   app_net:
