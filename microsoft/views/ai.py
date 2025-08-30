@@ -59,7 +59,7 @@ class DocumentSummarize(AyncAPIView):
                 "type": document.content_type
             }
             
-            question = "Summarize the document in 1 paragraph."
+            question = "Could you list the difference between both files I shared in one line."
             
             def wrapped_files(files):
                 wfiles = []
@@ -82,7 +82,7 @@ class DocumentSummarize(AyncAPIView):
             
             print("vector_store:", await ttyd.vector_store_id)
             print("Session id:", await ttyd.session_id)
-            await ttyd.upload_files_to_vector_store(clients.client_azure_openai, files)
+            # await ttyd.upload_files_to_vector_store(clients.client_azure_openai, files)
 
             response = await ttyd.ask_question_with_vector_search(
                 clients.client_azure_openai, 

@@ -22,7 +22,7 @@ class TalkToYourDocument:
         self.__client: AzureOpenAI = client if client else None
         self.__account =  account if account else None
         print("Account:", account, self.__account)
-        self.__session_id = str(uuid.uuid4())
+        self.__session_id: str | None = None
         self.__session_obj: Session | None = None
         self.__vector_store_id: str = None
         self.__vector_store: VectorStore | None = None
@@ -30,16 +30,17 @@ class TalkToYourDocument:
         
     async def get_or_create_session(self):
         self.__session_obj, session_created = await Session.objects.aget_or_create(
-            vector_store=self.__vector_store_obj, 
+            vector_store=self.__vector_store_obj,
             microsoft=self.__account
         )
         if (
             session_created or 
-            await sync_to_async(lambda: not self.__session_obj.vector_store)()
+            await sync_to_async(lambda: not self.__session_obj.session_id)()
         ):
-            self.__session_obj.vector_store = self.__vector_store_obj
+            self.__session_id = self.__session_obj.session_id = str(uuid.uuid4())
             await self.__session_obj.asave()
-        
+        else:
+            self.__session_id = self.__session_obj.session_id
         
     async def create_vector_store_for_client(
         self, 
@@ -111,7 +112,7 @@ class TalkToYourDocument:
     async def get_history(self):
         history = []
         messages_obj = await sync_to_async(lambda: Message.objects.filter(session=self.__session_obj))()
-        await sync_to_async(lambda: history.extend([x.to_dict() for x in messages_obj]))()
+        await sync_to_async(lambda: history.extend([x.to_dict() for x in messages_obj]), thread_sensitive=False)()
         return history
             
 
