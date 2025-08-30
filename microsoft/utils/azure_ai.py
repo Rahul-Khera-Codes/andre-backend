@@ -120,7 +120,8 @@ class TalkToYourDocument:
         self, 
         client: AzureOpenAI, 
         model: str, 
-        question: str
+        question: str,
+        stream: bool = False
     ):
         # Build conversation history for context
         history = await self.get_history()
@@ -136,10 +137,20 @@ class TalkToYourDocument:
                 "type": "file_search",
                 "vector_store_ids": [self.__vector_store_id]
             }],
-            stream=False,
+            stream=True,
         )
+        
+        async def stream_output():
+            for event in response:
+                if event.type == "response.output_text.delta":
+                    yield event.delta
+        
+        if stream:
+            return stream_output
+        
         # Save user question and assistant response
         await self.add_to_history("user", question)
         if response.output_text:
             await self.add_to_history("assistant", response.output_text)
         return response.output_text
+    

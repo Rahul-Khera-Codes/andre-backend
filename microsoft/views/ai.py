@@ -9,6 +9,7 @@ from django.core.exceptions import (
     MultipleObjectsReturned,
     ObjectDoesNotExist
 )
+from django.http import StreamingHttpResponse
 from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
@@ -17,6 +18,7 @@ from rest_framework.response import Response
 from ..client import clients
 from ..utils.auth import verify_access_token
 from ..utils.azure_ai import TalkToYourDocument
+from ..utils.response import async_to_sync_stream_response_consumer
 from ..models import EmailMessages
 from ..serializers import (
     DocumentSerializer,
@@ -39,8 +41,9 @@ class SummarizeEmailView(APIView):
             return Response(serializer_email.data, status=status.HTTP_200_OK)
         except Exception as e:
             return Response({"error": f"Internal Error: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)    
-        
-        
+    
+
+
 class DocumentSummarize(AyncAPIView):
     permission_classes = [IsAuthenticated]
     
@@ -59,7 +62,8 @@ class DocumentSummarize(AyncAPIView):
                 "type": document.content_type
             }
             
-            question = "Could you list the difference between both files I shared in one line."
+            question = "Could you tell me about the content for file: {}".format(document.name)
+            print("Question:", question)
             
             def wrapped_files(files):
                 wfiles = []
@@ -82,17 +86,31 @@ class DocumentSummarize(AyncAPIView):
             
             print("vector_store:", await ttyd.vector_store_id)
             print("Session id:", await ttyd.session_id)
-            # await ttyd.upload_files_to_vector_store(clients.client_azure_openai, files)
+            await ttyd.upload_files_to_vector_store(clients.client_azure_openai, files)
 
+            stream = True
             response = await ttyd.ask_question_with_vector_search(
                 clients.client_azure_openai, 
                 settings.AZURE_MODEL_NAME,
-                question
+                question,
+                stream=stream
             )
             
             print(f"Name: {file_data['name']}, size: {file_data['size']}, type: {file_data["type"]}")
-            file_data.update({"summary": response})
+            if stream:    
+                # output = ""
+                # async for x in response():
+                #     print(x)
+                #     output+=x
+                
+                return StreamingHttpResponse(
+                    async_to_sync_stream_response_consumer(response()), 
+                    content_type="text/plain"
+                )
+            
+            file_data.update({"summary": response.output_text})
             return Response({"message": file_data}, status=status.HTTP_201_CREATED  )
+            
         
         except ObjectDoesNotExist as e:
             model_class = e.__class__.model
