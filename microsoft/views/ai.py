@@ -88,28 +88,29 @@ class DocumentSummarize(AyncAPIView):
             print("Session id:", await ttyd.session_id)
             await ttyd.upload_files_to_vector_store(clients.client_azure_openai, files)
 
-            stream = True
-            response = await ttyd.ask_question_with_vector_search(
-                clients.client_azure_openai, 
-                settings.AZURE_MODEL_NAME,
-                question,
-                stream=stream
-            )
+            # stream = True
+            # response = await ttyd.ask_question_with_vector_search(
+            #     clients.client_azure_openai, 
+            #     settings.AZURE_MODEL_NAME,
+            #     question,
+            #     stream=stream
+            # )
             
-            print(f"Name: {file_data['name']}, size: {file_data['size']}, type: {file_data["type"]}")
-            if stream:    
-                # output = ""
-                # async for x in response():
-                #     print(x)
-                #     output+=x
+            # print(f"Name: {file_data['name']}, size: {file_data['size']}, type: {file_data["type"]}")
+            # if stream:    
+            #     # output = ""
+            #     # async for x in response():
+            #     #     print(x)
+            #     #     output+=x
                 
-                return StreamingHttpResponse(
-                    async_to_sync_stream_response_consumer(response()), 
-                    content_type="text/plain"
-                )
+            #     return StreamingHttpResponse(
+            #         async_to_sync_stream_response_consumer(response()), 
+            #         content_type="text/plain"
+            #     )
             
-            file_data.update({"summary": response.output_text})
-            return Response({"message": file_data}, status=status.HTTP_201_CREATED  )
+            # file_data.update({"summary": response.output_text})
+            # return Response({"message": file_data}, status=status.HTTP_201_CREATED  )
+            return Response({"message": "File uploaded successfully"}, status=status.HTTP_202_ACCEPTED)
             
         
         except ObjectDoesNotExist as e:
@@ -120,6 +121,7 @@ class DocumentSummarize(AyncAPIView):
             model_class = e.__class__.model
             print("Model:", model_class.__name__)
             return Response({"error": f"Internal Error: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)        
+        
         except Exception as e:
             print(format_exc())
             return Response({"error": f"Internal Error: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)    

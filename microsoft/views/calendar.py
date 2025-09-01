@@ -129,6 +129,7 @@ class CalenderEventNotificationView(AsyncAPIView):
     
     async def get(self, request):
         try:
+            # print("\nAnonymous user:", request.user)
             now = django_timezone.now()
             thresold = now + timedelta(minutes=15)
             events = await sync_to_async(
@@ -141,7 +142,7 @@ class CalenderEventNotificationView(AsyncAPIView):
                 return Response(events, status=status.HTTP_200_OK)
             
             else:
-                serializer = CalenderSerializer(events, many=True)
+                serializer = CalenderSerializerAsync(events, many=True)
                 return Response(serializer.adata, status=status.HTTP_200_OK)
             
         except Exception as e:
