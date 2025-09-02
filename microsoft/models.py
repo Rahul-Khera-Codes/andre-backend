@@ -112,10 +112,12 @@ class VectorStore(models.Model):
 
 
 class Session(models.Model):
-    session_id = models.CharField(max_length=64, unique=True)
-    microsoft = models.ForeignKey(MicrosoftConnectedAccounts, on_delete=models.SET_NULL, related_name="session", null=True)
-    vector_store = models.ForeignKey(VectorStore, on_delete=models.CASCADE, related_name='sessions', blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    deleted = models.BooleanField(default=False)
+    microsoft = models.ForeignKey(MicrosoftConnectedAccounts, on_delete=models.SET_NULL, related_name="session", null=True)
+    session_id = models.CharField(max_length=64, unique=True)
+    session_name = models.CharField(default='Demo chat')
+    vector_store = models.ForeignKey(VectorStore, on_delete=models.CASCADE, related_name='sessions', blank=True, null=True)
 
     def __str__(self):
         return self.session_id

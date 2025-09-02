@@ -1,14 +1,18 @@
+import asyncio
+from concurrent.futures import ThreadPoolExecutor
 from io import BytesIO
 from traceback import format_exc
 import uuid
 
 from adrf.views import APIView as AyncAPIView
+from asgiref.sync import sync_to_async
 from django.conf import settings
 from django.core.files.uploadedfile import InMemoryUploadedFile
 from django.core.exceptions import (
     MultipleObjectsReturned,
     ObjectDoesNotExist
 )
+from django.db.models import Q
 from django.http import StreamingHttpResponse
 from rest_framework import status
 from rest_framework.views import APIView
@@ -19,7 +23,12 @@ from ..client import clients
 from ..utils.auth import verify_access_token
 from ..utils.azure_ai import TalkToYourDocument
 from ..utils.response import async_to_sync_stream_response_consumer
-from ..models import EmailMessages
+from ..models import (
+    EmailMessages,
+    Message,
+    Session,
+    VectorStore
+)
 from ..serializers import (
     DocumentSerializer,
     EmailMessageSerializer,
@@ -28,6 +37,7 @@ from ..serializers.aserializers import (
     DocumentSerializerAsync,
     EmailMessageSerializerAsync,
 )
+from ..serializers.achatbot import MessageSerializerAsync, SessionSerializerAsync
 
 
 class SummarizeEmailView(APIView):
@@ -127,11 +137,71 @@ class DocumentSummarize(AyncAPIView):
             return Response({"error": f"Internal Error: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)    
         
         
+class ChatBotHistory(AyncAPIView):
+    permission_classes = [IsAuthenticated]
+    async def get(self, request):
+        try:
+            conversation_id = request.query_params.get("conversation_id")
+            if conversation_id:
+                sessions = await sync_to_async(
+                    lambda: Session.objects.filter(Q(microsoft=request.user) & Q(session_id=conversation_id) & Q(deleted=False)).first()
+                )()
+                if not sessions:
+                    return Response({"error": "Conversation not found"}, status=status.HTTP_400_BAD_REQUEST)
+                messages = Message.objects.filter(Q(session=sessions.id)).all()
+                await sync_to_async(
+                    lambda: print(("Messages:", messages))
+                )()
+                messages_serializer = MessageSerializerAsync(messages, many=True)
+                return Response({"messages": await messages_serializer.adata}, status=status.HTTP_200_OK)
+                
+            sessions = Session.objects.filter(Q(microsoft=request.user) & Q(deleted=False)).all()
+            session_serializer = SessionSerializerAsync(sessions, many=True)
+            return Response({"session": await session_serializer.adata}, status=status.HTTP_200_OK)
+        
+        except Exception as e:
+            print(format_exc())
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+        
+    def delete_all_converstaions(self, sessions):
+        for s in sessions:
+            s.deleted = True
+            s.save()
+            
+    async def execute_delete_all_conversations(self, sessions):
+        loop = asyncio.get_running_loop()
+        loop.run_in_executor(
+            ThreadPoolExecutor(),
+            self.delete_all_converstaions,
+            sessions
+        )
+            
+    async def delete(self, request):
+        try:
+            conversation_id = request.query_params.get("conversation_id")
+            if conversation_id:
+                session = await sync_to_async(
+                    lambda: Session.objects.filter(Q(microsoft=request.user) & Q(session_id=conversation_id)).first()
+                )()
+                session.deleted = True
+                await session.asave()
+                return Response({"message": "Conversation deleted successfully"}, status=status.HTTP_200_OK)
+                
+            sessions = Session.objects.filter(Q(microsoft=request.user) & Q(deleted=False)).all()
+            await self.execute_delete_all_conversations(sessions)
+                
+            return Response({"messages": "All conversation deleted successfully"}, status=status.HTTP_200_OK)
+        
+        except Exception as e:
+            print(format_exc())
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
 # {
 #     "id": "",
 #     "file_name": "",
 #     "file_size": "",
 #     "summary": "",
-#     "created": "",
+#     "created": "",``
 #     "type": "pdf"
 # }

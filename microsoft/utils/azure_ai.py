@@ -14,8 +14,8 @@ from ..models import (
     MicrosoftConnectedAccounts,
     Session,
     VectorStore as VectorStoreModel,
-    
 )
+from ..prompts import chat_llm_system_prompt
 
 class TalkToYourDocument:
     def __init__(self, *, client: AzureOpenAI | None = None, account: MicrosoftConnectedAccounts | None = None) -> None:
@@ -27,11 +27,13 @@ class TalkToYourDocument:
         self.__vector_store_id: str = None
         self.__vector_store: VectorStore | None = None
         self.__vector_store_obj: VectorStoreModel | None = None    
+        self.system_prompt = chat_llm_system_prompt()
         
-    async def get_or_create_session(self):
+    async def get_or_create_session(self, session_id: str):
         self.__session_obj, session_created = await Session.objects.aget_or_create(
             vector_store=self.__vector_store_obj,
-            microsoft=self.__account
+            microsoft=self.__account,
+            session_id=session_id
         )
         if (
             session_created or 
@@ -92,6 +94,10 @@ class TalkToYourDocument:
     @session_id.setter
     async def set_session_id(self, sid: str):
         self.__session_id = sid
+        
+    @property
+    async def session_obj(self):
+        return self.__session_obj
     
 
     async def upload_files_to_vector_store(
@@ -129,7 +135,10 @@ class TalkToYourDocument:
         
         # Add the new user question
         # history_plus_question = history + [{"role": "user", "content": question}]
-        history_plus_question = history + [{"role": "user", "content": question}]
+        history_plus_question = history + [
+            {"role": "system", "content": self.system_prompt}, 
+            {"role": "user", "content": question}
+        ]
         response = client.responses.create(
             model=model,
             input=history_plus_question,
