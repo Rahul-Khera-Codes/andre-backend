@@ -92,7 +92,7 @@ class DocumentSummarize(AyncAPIView):
             account = request.user
             ttyd = TalkToYourDocument(account=account)
             await ttyd.create_vector_store_for_client(clients.client_azure_openai)
-            await ttyd.get_or_create_session()
+            # await ttyd.get_or_create_session()
             
             print("vector_store:", await ttyd.vector_store_id)
             print("Session id:", await ttyd.session_id)

@@ -29,12 +29,13 @@ class TalkToYourDocument:
         self.__vector_store_obj: VectorStoreModel | None = None    
         self.system_prompt = chat_llm_system_prompt()
         
-    async def get_or_create_session(self, session_id: str):
+    async def get_or_create_session(self, session_id: str | None = None):
         self.__session_obj, session_created = await Session.objects.aget_or_create(
             vector_store=self.__vector_store_obj,
             microsoft=self.__account,
             session_id=session_id
         )
+        print(f"\nSEssion: {self.__session_id}, {self.__session_obj}\n")
         if (
             session_created or 
             await sync_to_async(lambda: not self.__session_obj.session_id)()

@@ -19,7 +19,7 @@ from .views.calendar import (
 )
 
 urlpatterns = [
-    path("ai/summarize/", DocumentSummarize.as_view(), name="summarize"),
+    path("summarize/", DocumentSummarize.as_view(), name="summarize"),
     path("ai/chatbot/history/", ChatBotHistory.as_view(), name="chatbot_history"),
     path("auth/refresh/", RefreshTokenView.as_view(), name="auth_refresh_token"),
     path("calendar/", CalenderEventView.as_view(), name='calender_event'),
