@@ -93,7 +93,9 @@ class EmailMessageSerializer(serializers.ModelSerializer):
     class Meta:
         model = EmailMessages
         fields = (
+            "bcc_recipients",
             "body_preview",
+            "cc_recipients",
             "content",
             "conversation_id",
             "folder_id",

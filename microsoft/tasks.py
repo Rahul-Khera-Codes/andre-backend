@@ -127,6 +127,8 @@ def mail_retrieve():
                         if sender:
                             email_payload['sender_email'] = sender['emailAddress']['address']
                         to_recipients = value.get('toRecipients')
+                        to_recipients['cc_recipients'] = value.get('ccRecipients')
+                        to_recipients['bcc_recipients'] = value.get('bccRecipients')
                         to_recipient_emails = []
                         if to_recipients:
                             for to_recipient in to_recipients:
@@ -394,6 +396,8 @@ def new_user_mail_sync(access_token, account):
                 if sender:
                     email_payload['sender_email'] = sender['emailAddress']['address']
                 to_recipients = value.get('toRecipients')
+                to_recipients['cc_recipients'] = value.get('ccRecipients')
+                to_recipients['bcc_recipients'] = value.get('bccRecipients')
                 to_recipient_emails = []
                 if to_recipients:
                     for to_recipient in to_recipients:
@@ -574,6 +578,8 @@ def new_user_mail_sync_all(access_token, account):
                 if sender:
                     email_payload['sender_email'] = sender['emailAddress']['address']
                 to_recipients = value.get('toRecipients')
+                to_recipients['cc_recipients'] = value.get('ccRecipients')
+                to_recipients['bcc_recipients'] = value.get('bccRecipients')
                 to_recipient_emails = []
                 if to_recipients:
                     for to_recipient in to_recipients:

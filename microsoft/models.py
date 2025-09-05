@@ -41,7 +41,9 @@ class MicrosoftConnectedAccounts(models.Model):
 class EmailMessages(models.Model):
     attachment_ids = ArrayField(models.TextField(null=True), default=list)
     attachment_content_type = models.CharField(null=True, blank=True)
+    bcc_recipients = ArrayField(models.CharField(null=True), default=list)
     body_preview = models.CharField(null=False)
+    cc_recipients = ArrayField(models.CharField(null=True), default=list)
     content = models.CharField(null=False)
     conversation_id = models.CharField(null=True)
     folder_id = models.CharField()

@@ -17,6 +17,7 @@ from .views.calendar import (
     CalenderEventView, 
     CalenderEventNotificationView
 )
+from .views.one_drive import OneDriveView
 
 urlpatterns = [
     path("summarize/", DocumentSummarize.as_view(), name="summarize"),
@@ -29,4 +30,5 @@ urlpatterns = [
     path('get/mail/folder/', GetMailFolder.as_view(), name='get_user_mail_folders'),
     path("get/mails/", GetUserMail.as_view(), name="get_user_mail"),
     path('oauth/outlook/callback/', MicrosoftConnectVerify.as_view(), name='outlook_oauth'),
+    path("onedrive/", OneDriveView.as_view(), name='onedrive')
 ]
