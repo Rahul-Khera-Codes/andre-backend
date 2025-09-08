@@ -96,6 +96,7 @@ def mail_retrieve():
                 
                 if values:
                     for value in values:
+                        print(value)
                         email_payload = {}
                         message_id = value.get('id')
         
@@ -126,9 +127,22 @@ def mail_retrieve():
                         sender = value.get('sender')
                         if sender:
                             email_payload['sender_email'] = sender['emailAddress']['address']
+                        
+                        # cc recipients
+                        print("###############################", value.get('ccRecipients'), value.get('bccRecipients'))
+                        cc_recipients_mails = []
+                        if cc_recipients := value.get('ccRecipients'):
+                            for mail in cc_recipients:
+                                cc_recipients_mails.append(mail['emailAddress']['address'])
+                        email_payload['cc_recipients'] = cc_recipients_mails
+                        # bcc recipients
+                        bcc_recipients_mails = []
+                        if bcc_recipients := value.get("bccRecipients"):
+                            for mail in bcc_recipients:
+                                bcc_recipients_mails.append(mail['emailAddress']['address'])
+                        email_payload['bcc_recipients'] = bcc_recipients_mails
+                        # to recipients
                         to_recipients = value.get('toRecipients')
-                        to_recipients['cc_recipients'] = value.get('ccRecipients')
-                        to_recipients['bcc_recipients'] = value.get('bccRecipients')
                         to_recipient_emails = []
                         if to_recipients:
                             for to_recipient in to_recipients:
@@ -137,7 +151,6 @@ def mail_retrieve():
                         email_payload['to_recipient_emails'] = to_recipient_emails
                         email_payload['mail_time'] = value.get('createdDateTime')
         
-                        
                         email, created = EmailMessages.objects.get_or_create(**email_payload, message_id=message_id, microsoft=account)
                         if not created: continue
                         
@@ -395,9 +408,21 @@ def new_user_mail_sync(access_token, account):
                 sender = value.get('sender')
                 if sender:
                     email_payload['sender_email'] = sender['emailAddress']['address']
+                
+                # cc recipients
+                cc_recipients_mails = []
+                if cc_recipients := value.get('ccRecipients'):
+                    for mail in cc_recipients:
+                        cc_recipients_mails.append(mail['emailAddress']['address'])
+                email_payload['cc_recipients'] = cc_recipients_mails
+                # bcc recipients
+                bcc_recipients_mails = []
+                if bcc_recipients := value.get("bccRecipients"):
+                    for mail in bcc_recipients:
+                        bcc_recipients_mails.append(mail['emailAddress']['address'])
+                email_payload['bcc_recipients'] = bcc_recipients_mails
+                # to recipients
                 to_recipients = value.get('toRecipients')
-                to_recipients['cc_recipients'] = value.get('ccRecipients')
-                to_recipients['bcc_recipients'] = value.get('bccRecipients')
                 to_recipient_emails = []
                 if to_recipients:
                     for to_recipient in to_recipients:
@@ -577,9 +602,20 @@ def new_user_mail_sync_all(access_token, account):
                 sender = value.get('sender')
                 if sender:
                     email_payload['sender_email'] = sender['emailAddress']['address']
+                # cc recipients
+                cc_recipients_mails = []
+                if cc_recipients := value.get('ccRecipients'):
+                    for mail in cc_recipients:
+                        cc_recipients_mails.append(mail['emailAddress']['address'])
+                email_payload['cc_recipients'] = cc_recipients_mails
+                # bcc recipients
+                bcc_recipients_mails = []
+                if bcc_recipients := value.get("bccRecipients"):
+                    for mail in bcc_recipients:
+                        bcc_recipients_mails.append(mail['emailAddress']['address'])
+                email_payload['bcc_recipients'] = bcc_recipients_mails
+                # to recipients
                 to_recipients = value.get('toRecipients')
-                to_recipients['cc_recipients'] = value.get('ccRecipients')
-                to_recipients['bcc_recipients'] = value.get('bccRecipients')
                 to_recipient_emails = []
                 if to_recipients:
                     for to_recipient in to_recipients:

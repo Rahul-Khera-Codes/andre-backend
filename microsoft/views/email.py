@@ -63,7 +63,7 @@ class GetUserMail(AynsAPIView):
     
     async def post(self, request):
         try:
-            print("draft:", 1)
+            print("draft:", 1, request.data)
             serializer_mail = DraftSerializer(data=request.data)
             if not serializer_mail.is_valid():
                 return Response({"error": serializer_mail.error_messages}, status=status.HTTP_400_BAD_REQUEST)

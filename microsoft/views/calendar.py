@@ -51,49 +51,52 @@ class CalenderEventView(AsyncAPIView):
     async def post(self, request):
         try:
                 
-            serializers = CalenderCreateSerializer(data=request.data)
-            if serializers.is_valid():
+            serializer = CalenderCreateSerializer(data=request.data)
+            if serializer.is_valid():
                 event_body = {
-                    'subject': serializers.validated_data.get('subject'),
+                    'subject': serializer.validated_data.get('subject'),
                     'start': {
-                        "dateTime": serializers.validated_data.get('start'),
+                        "dateTime": serializer.validated_data.get('start').isoformat(),
                         "timeZone": "UTC"
                     },
                     'end': {
-                        "dateTime": serializers.validated_data.get('end'),
+                        "dateTime": serializer.validated_data.get('end').isoformat(),
                         "timeZone": "UTC"
                     },
-                    "reminderMinutesBeforeStart": serializers.validate_data.get('reminderMinutesBeforeStart'),
+                    "reminderMinutesBeforeStart": serializer.validated_data.get('remainder_minutes_before_start'),
                 }
-                body = serializers.validated_data.get('body')
-                location = serializers.validated_data.get('location')
-                if body:
-                    event_body['body'] = body
-                if location: event_body['location'] = location
+                if body := serializer.validated_data.get('body'): event_body['body'] = {"contentType": "HTML", "content": body}
+                if location := serializer.validated_data.get('location'): event_body['location'] = {"displayName": location}
+                
+                print(event_body)
                 
                 status_code, response = await sync_to_async(lambda: create_calendar_event(request.user.access_token, event_body))()
+                print("????????????????????????????????", response)
                 if status_code not in (200, 201):
                     return Response({"error": "Error in creating calender event"}, status=status.HTTP_400_BAD_REQUEST)
                 
-                event_body = {
+                event_body_db = {
                     "event_id": response.get('id'),
                     'subject': response.get('subject'),
                     'start': response.get('start'),
                     'end': response.get('end'),
-                    "reminderMinutesBeforeStart": response.get('reminderMinutesBeforeStart'),
+                    "remainder_minutes_before_start": response.get('reminderMinutesBeforeStart'),
                 }
-                body = response.get('body')
-                location = response.get('location')
-                if body:
-                    event_body['body'] = body
-                if location: event_body['location'] = location
+                if body := response.get("body"): event_body_db['body'] = body
+                if location := response.get('location'): event_body_db['location'] = location
                 
                 calender = Calender.objects.acreate(**event_body, microsoft=request.user)
                 return Response({"message": "Calendar event created successfully"}, status=status.HTTP_201_CREATED)
         
+            return Response({"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+        
         except Exception as e:
+            print(format_exc())
             return Response({"error": "Internal Error"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)    
 
+    async def put(self, request):
+        return self.post(request)
+    
 
 async def generate_dummy_events():
     events = []

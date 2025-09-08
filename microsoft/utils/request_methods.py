@@ -1,4 +1,5 @@
 import asyncio
+from concurrent.futures import ThreadPoolExecutor
 
 import aiohttp
 from asgiref.sync import sync_to_async
@@ -30,10 +31,16 @@ async def get_onedrive_content(
             if response.status == 200:
                 return await response.json()
             else:
+                loop = asyncio.get_running_loop()
+                rt_status, rt_resposne = await loop.run_in_executor(
+                    ThreadPoolExecutor(),
+                    get_refresh_token,
+                    account.refresh_token
+                )
+                if rt_status != 200:
+                    raise MSInvalidTokenError("Microsoft token expired, please login again")
+                                        
+        async with session.get(url=url, headers=headers) as response:
+            if response.status == 200:
                 return await response.json()
-                # asyncio.sleep(0.3)
-                # rt_status, rt_resposne = get_refresh_token(account.refresh_token)
-                # if rt_status == 200:
-                    
-                    
-    
+            raise MSInvalidTokenError("Microsoft login expired, please login again")

@@ -36,9 +36,9 @@ def get_mail_messages(access_token, time_filter: str | None = None, new_user: bo
     # if new_user is True, fetch latest 50 emails.
     # else user time_filter for background sync jjobs
     if new_user:
-        url = f"https://graph.microsoft.com/v1.0/me/messages?$top=10&$orderBy=receivedDateTime asc&$select=id,subject,from,sender,receivedDateTime,bodyPreview,uniqueBody,body,toRecipients,isDraft,parentFolderId,hasAttachments,sentDateTime,receivedDateTime,createdDateTime,conversationId"
+        url = f"https://graph.microsoft.com/v1.0/me/messages?$top=10&$orderBy=receivedDateTime asc&$select=id,subject,from,sender,receivedDateTime,bodyPreview,uniqueBody,body,toRecipients,isDraft,parentFolderId,hasAttachments,sentDateTime,receivedDateTime,createdDateTime,conversationId,ccRecipients,bccRecipients"
     else:
-        url = f"https://graph.microsoft.com/v1.0/me/messages?$filter=receivedDateTime ge {time_filter}&$orderBy=receivedDateTime asc&$select=id,subject,sender,from,receivedDateTime,bodyPreview,uniqueBody,body,toRecipients,isDraft,parentFolderId,hasAttachments,sentDateTime,receivedDateTime,createdDateTime,conversationId"
+        url = f"https://graph.microsoft.com/v1.0/me/messages?$filter=receivedDateTime ge {time_filter}&$orderBy=receivedDateTime asc&$select=id,subject,sender,from,receivedDateTime,bodyPreview,uniqueBody,body,toRecipients,isDraft,parentFolderId,hasAttachments,sentDateTime,receivedDateTime,createdDateTime,conversationId,ccRecipients,bccRecipients"
         
     headers = {
         "Authorization": f"Bearer {access_token}",
@@ -93,7 +93,6 @@ def create_calendar_event(access_token: str, event_body: dict, /):
     }
     
     response = requests.post(url, headers=headers, json=event_body)
-    
     return response.status_code, response.json()
 
 

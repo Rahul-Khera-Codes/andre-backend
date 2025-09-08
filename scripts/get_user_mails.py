@@ -16,7 +16,7 @@ headers = {
 }
 
 # Fetch top 10 messages
-url = "https://graph.microsoft.com/v1.0/me/messages?$top=99&$orderBy=receivedDateTime asc"
+url = "https://graph.microsoft.com/v1.0/me/messages?$top=99&$orderBy=receivedDateTime desc"
 # url = "https://graph.microsoft.com/v1.0/me/sentitems/messages"
 url_attachment_lists = 'https://graph.microsoft.com/v1.0/me/messages/{}/attachments'
 
@@ -25,12 +25,14 @@ response = requests.get(url, headers=headers)
 if response.status_code == 200:
     messages = response.json().get("value", [])
     for msg in messages:
-        print(msg)
+        # print(msg)
         print("Subject:", msg.get("subject"))
         print("From:", msg.get("from", {}).get("emailAddress", {}).get("address"))
         print("Received:", msg.get("receivedDateTime"))
         # print("Preview:", msg.get("bodyPreview"))
         print("toRecipients:", msg.get('toRecipients'))
+        print("ccRecipients:", msg.get('ccRecipients'))
+        print("bccRecipients:", msg.get('bccRecipients'))
         print("isDraft:", msg.get("isDraft"))
         
         if msg.get("hasAttachments"):

@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
 from typing import Literal
 
+from adrf import serializers as async_serializers
 from rest_framework import serializers
 from ..models import (
     Calender,
@@ -68,10 +69,10 @@ class CalenderSerializer(serializers.ModelSerializer):
 class CalenderCreateSerializer(serializers.Serializer):
     end = serializers.DateTimeField()
     start = serializers.DateTimeField()
-    subject = serializers.CharField(required=False, default="")
-    body = serializers.CharField(required=False, default="")
-    location = serializers.CharField(required=False, default="")
-    remainderMinutesBeforeStart = serializers.IntegerField(default=15, required=False)
+    subject = serializers.CharField(required=False, default="", allow_blank=True)
+    body = serializers.CharField(required=False, default="", allow_blank=True)
+    location = serializers.CharField(required=False, default="", allow_blank=True)
+    remainder_minutes_before_start = serializers.IntegerField(default=15, required=False)
     
 
 class SummarizationSerializer(serializers.ModelSerializer):
@@ -118,9 +119,9 @@ class RefreshTokenSerailizer(serializers.Serializer):
     
 class DraftSerializer(serializers.Serializer):
     filter = serializers.CharField()
-    body = serializers.CharField()
-    recipients = serializers.ListField(child=serializers.CharField(), required=False, default=[])
-    subject = serializers.CharField(required=False, default='')
+    body = serializers.CharField(default="", allow_blank=True)
+    recipients = serializers.ListField(child=serializers.CharField(required=False, default="", allow_blank=True), required=False, default=[])
+    subject = serializers.CharField(required=False, default='', allow_blank=True)
     
 
 class DocumentSerializer(serializers.Serializer):
