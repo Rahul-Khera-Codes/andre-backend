@@ -43,7 +43,7 @@ class CalenderSerializerAsync(async_serializers.ModelSerializer):
         return {
             "body": {
                 "contentType": "html",
-                "content": ""
+                "content": instance.body
             },
             "email_id": instance.email.message_id if hasattr(instance.email, "message_id")  else None,
             # "summary_id": instance.summary.id if hasattr(instance.summary, "id") else None,

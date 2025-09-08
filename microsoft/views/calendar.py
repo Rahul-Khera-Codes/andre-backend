@@ -19,13 +19,14 @@ from ..utils.auth import verify_access_token
 from ..models import Calender
 from ..serializers import (
     CalenderSerializer,
-    CalenderCreateSerializer
+    CalenderCreateSerializer,
+    CalenderEditSerializer
 )
 from ..serializers.aserializers import (
     CalenderSerializerAsync,
     CalenderCreateSerializerAsync
 )
-from ..utils import create_calendar_event
+from ..utils import create_calendar_event, edit_calender_event
 
 
 
@@ -50,8 +51,7 @@ class CalenderEventView(AsyncAPIView):
     
     async def post(self, request):
         try:
-                
-            serializer = CalenderCreateSerializer(data=request.data)
+            serializer = CalenderEditSerializer(data=request.data)
             if serializer.is_valid():
                 event_body = {
                     'subject': serializer.validated_data.get('subject'),
@@ -94,8 +94,56 @@ class CalenderEventView(AsyncAPIView):
             print(format_exc())
             return Response({"error": "Internal Error"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)    
 
-    async def put(self, request):
-        return self.post(request)
+    async def patch(self, request):
+        try:
+            event_id = request.query_params.get('event_id')
+            serializer = CalenderEditSerializer(data=request.data)
+            if serializer.is_valid():
+                # event_body = {
+                #     'subject': serializer.validated_data.get('subject'),
+                #     'start': {
+                #         "dateTime": serializer.validated_data.get('start').isoformat(),
+                #         "timeZone": "UTC"
+                #     },
+                #     'end': {
+                #         "dateTime": serializer.validated_data.get('end').isoformat(),
+                #         "timeZone": "UTC"
+                #     },
+                #     "reminderMinutesBeforeStart": serializer.validated_data.get('remainder_minutes_before_start'),
+                # }
+                event_body = {}
+                if start := serializer.validated_data.get('start'): event_body['start'] = {"dateTime": start.isoformat(), "timeZone": "UTC"}
+                if end := serializer.validated_data.get('end'): event_body['end'] = {"dateTime": end.isoformat(), "timeZone": "UTC"}
+                if subject := serializer.validated_data.get('subject'): event_body['subject'] = subject
+                if body := serializer.validated_data.get('body'): event_body['body'] = {"contentType": "HTML", "content": body}
+                if location := serializer.validated_data.get('location'): event_body['location'] = {"displayName": location}
+
+                print("##############################", event_body)
+                status_code, response = await sync_to_async(lambda: edit_calender_event(request.user.access_token, event_id, event_body))()
+                print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!", status_code, response)
+                if status_code not in (200, 201):
+                    return Response({"error": "Error in updating event"}, status=status.HTTP_400_BAD_REQUEST)
+                
+                calender = await Calender.objects.filter(event_id=event_id, microsoft=request.user).afirst()
+                # event_body_db = {
+                #     "event_id": response.get('id'),
+                #     'subject': response.get('subject'),
+                #     'start': response.get('start'),
+                #     'end': response.get('end'),
+                #     "remainder_minutes_before_start": response.get('reminderMinutesBeforeStart'),
+                # }
+                # if body := response.get("body"): event_body_db['body'] = body
+                # if location := response.get('location'): event_body_db['location'] = location
+                calender = await sync_to_async(lambda: serializer.update(instance=calender, validated_data=serializer.validated_data))()
+                
+                return Response({"message": "Calendar event created successfully"}, status=status.HTTP_201_CREATED)
+        
+            return Response({"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+        
+        except Exception as e:
+            print(format_exc())
+            return Response({"error": "Internal Error"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)    
+
     
 
 async def generate_dummy_events():

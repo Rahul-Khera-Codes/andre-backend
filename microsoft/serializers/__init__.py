@@ -74,6 +74,33 @@ class CalenderCreateSerializer(serializers.Serializer):
     location = serializers.CharField(required=False, default="", allow_blank=True)
     remainder_minutes_before_start = serializers.IntegerField(default=15, required=False)
     
+    def update(self, instance, validated_data):
+        info = validated_data.items()
+        for key, value in info:
+            if hasattr(instance, key):
+                setattr(instance, key, value)
+        instance.save()
+        return instance
+        
+        
+class CalenderEditSerializer(serializers.Serializer):
+    end = serializers.DateTimeField(required=False)
+    start = serializers.DateTimeField(required=False)
+    subject = serializers.CharField(required=False)
+    body = serializers.CharField(required=False)
+    location = serializers.CharField(required=False)
+    remainder_minutes_before_start = serializers.IntegerField(required=False)
+    
+    def update(self, instance, validated_data):
+        info = validated_data.items()
+        for key, value in info:
+            if hasattr(instance, key):
+                setattr(instance, key, value)
+        instance.save()
+        return instance
+        
+
+
 
 class SummarizationSerializer(serializers.ModelSerializer):
     summary = serializers.CharField()

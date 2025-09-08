@@ -95,6 +95,16 @@ def create_calendar_event(access_token: str, event_body: dict, /):
     response = requests.post(url, headers=headers, json=event_body)
     return response.status_code, response.json()
 
+def edit_calender_event(access_token: str, event_id: str, event_body: dict, /):
+    url = f"https://graph.microsoft.com/v1.0/me/events/{event_id}"
+    headers = {
+        "Authorization": f"Bearer {access_token}",
+        "Accept": "application/json",
+        "Content-Type": "application/json"
+    }
+    response = requests.patch(url, headers=headers, json=event_body)
+    return response.status_code, response.json()
+
 
 def get_refresh_token(refresh_token):
     
