@@ -23,7 +23,7 @@ class OneDriveView(AsynAPIView):
                 drive_response = await get_onedrive_content(account.access_token, account=account, folder_id=folder_id)
             else:
                 drive_response = await get_onedrive_content(account.access_token, account=account)
-            print("Drive response:", drive_response)
+            # print("Drive response:", drive_response)
             return Response(drive_response, status=status.HTTP_200_OK)
         except MSInvalidTokenError as e:
             return Response({"error": str(e)}, status=status.HTTP_401_UNAUTHORIZED)

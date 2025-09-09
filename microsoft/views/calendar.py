@@ -118,9 +118,9 @@ class CalenderEventView(AsyncAPIView):
                 if body := serializer.validated_data.get('body'): event_body['body'] = {"contentType": "HTML", "content": body}
                 if location := serializer.validated_data.get('location'): event_body['location'] = {"displayName": location}
 
-                print("##############################", event_body)
+                # print("##############################", event_body)
                 status_code, response = await sync_to_async(lambda: edit_calender_event(request.user.access_token, event_id, event_body))()
-                print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!", status_code, response)
+                # print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!", status_code, response)
                 if status_code not in (200, 201):
                     return Response({"error": "Error in updating event"}, status=status.HTTP_400_BAD_REQUEST)
                 

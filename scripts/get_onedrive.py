@@ -68,4 +68,4 @@ async def walk_onedrive():
                     print("Not authenticated")
 
 if __name__ == "__main__":
-    asyncio.run(walk_onedrive())
+    asyncio.run(get_onedrive_content())

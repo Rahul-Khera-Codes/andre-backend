@@ -2,8 +2,10 @@ import asyncio
 from concurrent.futures import ThreadPoolExecutor
 from io import BytesIO
 from traceback import format_exc
+import urllib
 import uuid
 
+import aiohttp
 from adrf.views import APIView as AyncAPIView
 from asgiref.sync import sync_to_async
 from django.conf import settings
@@ -59,21 +61,59 @@ class DocumentSummarize(AyncAPIView):
     
     async def post(self, request):
         try:
-            serializer = DocumentSerializerAsync(data=request.data)
-            if not serializer.is_valid():
-                return Response({"error": "Invalid file"}, status=status.HTTP_400_BAD_REQUEST)
+            filename: str | None = None
+            content_len: int = 0
+            content_type: str | None = None
+            document: InMemoryUploadedFile | None = None
+            files: bytes | None = None
+            file_data: dict = {}
+            if dlink := request.query_params.get('dlink'):
+                async with aiohttp.ClientSession() as session:
+                    async with session.get(url=dlink) as response:
+                        if response.status != 200:
+                            return Response({"error": "Unable to download file, please check if the files exists"}, status=status.HTTP_204_NO_CONTENT)
+                        file_bytes = await response.read()
+                        content_len = len(file_bytes)
+                        content_type = response.headers.get('Content-Type')
+                        content_disp = response.headers.get("Content-Disposition", "")
+                        
+                        if "filename*=" in content_disp:
+                            # Get after "filename*="
+                            encoded_name = content_disp.split("filename*=")[-1].split(";")[0].split("''")[-1]
+                            filename = urllib.parse.unquote(encoded_name)
+                        elif "filename=" in content_disp:
+                            filename = content_disp.split("filename=")[-1].strip('";')
+                        
+                        bio = BytesIO(file_bytes)
+                        bio.name = filename
+                        files = [bio]
+                        
+                        file_data.update({
+                            "name": bio.name,
+                            "size": len(bio.read()),
+                            "type": content_type
+                        })
+
+            elif data := request.data:
+                serializer = DocumentSerializerAsync(data=data)
+        
+                if not serializer.is_valid():
+                    return Response({"error": "Invalid file"}, status=status.HTTP_400_BAD_REQUEST)
+                
+                document: InMemoryUploadedFile = serializer.validated_data.get("document")
+                        
+                # content_bytes = document.read()
+                # print("Type", type(content_bytes))
+                file_data.update({
+                    "name": filename if filename else document.name,
+                    "size": content_len if content_len else document.size,
+                    "type": content_type if content_type else document.content_type
+                })
+            else:
+                return Response({"error": "Invalid request: query link or file upload"}, status=status.HTTP_400_BAD_REQUEST)
             
-            document: InMemoryUploadedFile = serializer.validated_data.get("document")
-            # content_bytes = document.read()
-            # print("Type", type(content_bytes))
-            file_data = {
-                "name": document.name,
-                "size": document.size,
-                "type": document.content_type
-            }
-            
-            question = "Could you tell me about the content for file: {}".format(document.name)
-            print("Question:", question)
+            # question = "Could you tell me about the content for file: {}".format(document.name)
+            # print("Question:", question)
             
             def wrapped_files(files):
                 wfiles = []
@@ -85,17 +125,16 @@ class DocumentSummarize(AyncAPIView):
                     f.seek(0)  # reset so Django can reuse if needed
                     wfiles.append(bio)
                 return wfiles
-                        
-            files = wrapped_files([document])
-            print("Files length:", len(files))
             
+            if document:
+                files = wrapped_files([document])
             account = request.user
             ttyd = TalkToYourDocument(account=account)
             await ttyd.create_vector_store_for_client(clients.client_azure_openai)
             # await ttyd.get_or_create_session()
             
-            print("vector_store:", await ttyd.vector_store_id)
-            print("Session id:", await ttyd.session_id)
+            # print("vector_store:", await ttyd.vector_store_id)
+            # print("Session id:", await ttyd.session_id)
             await ttyd.upload_files_to_vector_store(clients.client_azure_openai, files)
 
             # stream = True
