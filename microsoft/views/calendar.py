@@ -184,11 +184,10 @@ class CalenderEventNotificationView(AsyncAPIView):
             now = django_timezone.now()
             thresold = now + timedelta(minutes=15)
             events = await sync_to_async(
-                lambda: Calender.objects.filter(microsoft=request.user, start__gt=now, start__lte=thresold),
-                thread_sensitive=False
+                lambda: Calender.objects.filter(microsoft=request.user, start__gt=now, start__lte=thresold)
             )()
             
-            if (await sync_to_async(lambda: len(events), thread_sensitive=False)()) == 0:
+            if (await sync_to_async(lambda: len(events))()) == 0:
                 events = await generate_dummy_events()
                 return Response(events, status=status.HTTP_200_OK)
             

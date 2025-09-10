@@ -1,3 +1,4 @@
+from math import ceil
 from traceback import format_exc
 
 from adrf.views import APIView as AynsAPIView
@@ -44,18 +45,42 @@ class GetUserMail(AynsAPIView):
             mail_filter = snake_to_camel(mail_filter)
             if mail_filter == "All" or mail_filter == 'all':
                 mail_filter = None
+            # Pagination params
+            try:
+                page = int(request.query_params.get("page", 1))
+                page_size = int(request.query_params.get("page_size", 10))
+            except ValueError:
+                return Response({"error": "Invalid pagination parameter"}, status=status.HTTP_400_BAD_REQUEST)
+            if page < 1 and page_size < 1:
+                return Response({"error": "Page and page_size must be positive integers"}, status=status.HTTP_400_BAD_REQUEST)
             
+            # Filtering
             if mail_filter:
-                emails = await sync_to_async(
-                    lambda: EmailMessages.objects.filter(Q(microsoft=request.user) & Q(folder_name=mail_filter))
+                emails_qs = await sync_to_async(
+                    lambda: EmailMessages.objects.filter(Q(microsoft=request.user) & Q(folder_name=mail_filter)).order_by("-created")
                 )()
             else: 
-                emails = await sync_to_async(
-                    lambda: EmailMessages.objects.filter(microsoft=request.user)
+                emails_qs = await sync_to_async(
+                    lambda: EmailMessages.objects.filter(microsoft=request.user).order_by("-created")
                 )()
                 
+            # Get total count
+            total_count = await sync_to_async(emails_qs.count)()
+            total_pages = ceil(total_count / page_size) if page_size else 1
+            # Pageinate
+            start = (page - 1) * page_size
+            end = start + page_size
+            emails = await (sync_to_async(lambda: list(emails_qs[start:end])))()
             email_serializer = EmailMessageSerializerAsync(emails, many=True)
-            return Response(await email_serializer.adata, status=status.HTTP_200_OK)    
+            data = await email_serializer.adata
+            return Response({
+                "pagination": {
+                    "total_count": total_count,
+                    "page": page,
+                    "total_pages": total_pages
+                },
+                "emails": data
+            }, status=status.HTTP_200_OK)    
         except Exception as e:
             print("error:", format_exc())
             return Response({"error": f"Internal Error: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)    

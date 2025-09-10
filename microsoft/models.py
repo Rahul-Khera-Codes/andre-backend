@@ -69,7 +69,8 @@ class EmailMessages(models.Model):
     created = models.DateTimeField(auto_now_add=True)
     updated = models.DateTimeField(auto_now=True)
 
-
+    class Meta:
+        ordering = ["-created"]
 # class Documents(models.Model):
 #     microsoft = models.ForeignKey(MicrosoftConnectedAccounts, on_delete=models.CASCADE, related_name="documents")
 #     content_type = models.CharField(blank=True, null=True)

@@ -50,7 +50,6 @@ class DashboardView(AsyncAPIView):
     async def get(self, request):
         try:
             # latest emails from each folder
-            
             latest_folder_mails = await latest_mails(request.user)
             serializer_email = EmailMessageSerializer(latest_folder_mails, many=True)
             
@@ -58,8 +57,8 @@ class DashboardView(AsyncAPIView):
             events = await latest_calender_events(account=request.user)
             serializer_calendar = CalenderSerializer(events, many=True)
             
-            serializer_email_data = await sync_to_async(lambda: serializer_email.data, thread_sensitive=False)()
-            serializer_calendar_data = await sync_to_async(lambda: serializer_calendar.data, thread_sensitive=False)()
+            serializer_email_data = await sync_to_async(lambda: serializer_email.data)()
+            serializer_calendar_data = await sync_to_async(lambda: serializer_calendar.data)()
             
             data = {
                 "emails": serializer_email_data,

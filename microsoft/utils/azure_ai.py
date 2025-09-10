@@ -119,7 +119,7 @@ class TalkToYourDocument:
     async def get_history(self):
         history = []
         messages_obj = await sync_to_async(lambda: Message.objects.filter(session=self.__session_obj))()
-        await sync_to_async(lambda: history.extend([x.to_dict() for x in messages_obj]), thread_sensitive=False)()
+        await sync_to_async(lambda: history.extend([x.to_dict() for x in messages_obj]))()
         return history
             
 
